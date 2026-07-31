@@ -1,1 +1,7 @@
-
+numpy
+scipy
+pillow
+requests
+folium
+websockets
+websocket-client
