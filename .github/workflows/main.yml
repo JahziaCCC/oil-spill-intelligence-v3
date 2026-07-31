@@ -2,6 +2,7 @@ name: Oil Spill Intelligence V3
 
 on:
   workflow_dispatch:
+
   schedule:
     - cron: "0 */6 * * *"
 
@@ -15,7 +16,7 @@ jobs:
 
     steps:
 
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
 
@@ -25,12 +26,13 @@ jobs:
           python-version: "3.11"
 
 
-      - name: Install dependencies
+      - name: Install requirements
         run: |
           pip install -r requirements.txt
 
-- name: Run AIS Collector
-  env:
-    AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
-  run: |
-    python ais/collector.py
+
+      - name: Run system
+        env:
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+        run: |
+          python main.py
