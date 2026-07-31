@@ -1,129 +1,83 @@
-import json
-import os
+import asyncio
+
+from ais.collector import collect_ais
+from intelligence.maritime_engine import calculate_risk
 
 
-AIS_CACHE_FILE = "data/ais_cache.json"
+print("=" * 50)
+print("Oil Spill Intelligence V3")
+print("AIS INTELLIGENCE ENGINE")
+print("=" * 50)
 
 
-CHOKEPOINTS = {
+async def main():
 
-    "Strait of Hormuz": {
-        "lat_min": 24,
-        "lat_max": 28,
-        "lon_min": 54,
-        "lon_max": 57
-    },
+    # ===============================
+    # AIS COLLECTION
+    # ===============================
 
-    "Bab el-Mandeb": {
-        "lat_min": 11,
-        "lat_max": 14,
-        "lon_min": 42,
-        "lon_max": 45
-    },
-
-    "Suez Canal": {
-        "lat_min": 29,
-        "lat_max": 32,
-        "lon_min": 31,
-        "lon_max": 33
-    }
-
-}
+    vessels = await collect_ais()
 
 
+    print()
+    print("=" * 50)
+    print("ملخص نظام AIS")
+    print("=" * 50)
 
-def load_vessels():
+    print("عدد السفن المرصودة:", len(vessels))
+    print("تم تحديث سجل المسارات")
+    print("عدد السفن المتتبعة:", len(vessels))
 
-    if not os.path.exists(AIS_CACHE_FILE):
-        return []
-
-    with open(
-        AIS_CACHE_FILE,
-        "r",
-        encoding="utf-8"
-    ) as f:
-
-        return json.load(f)
+    print("=" * 50)
 
 
 
-def check_zone(vessel, zone):
+    # ===============================
+    # MARITIME RISK ENGINE
+    # ===============================
 
-    lat = vessel.get("lat")
-    lon = vessel.get("lon")
-
-    if lat is None or lon is None:
-        return False
+    risk_report = calculate_risk(vessels)
 
 
-    return (
-
-        zone["lat_min"]
-        <= lat
-        <= zone["lat_max"]
-
-        and
-
-        zone["lon_min"]
-        <= lon
-        <= zone["lon_max"]
-
-    )
+    print()
+    print("=" * 50)
+    print("تقرير المخاطر البحرية على المضائق")
+    print("=" * 50)
 
 
+    for area, data in risk_report.items():
 
-def analyze_maritime():
+        print()
+        print(area)
 
-    vessels = load_vessels()
+        print(
+            "عدد السفن:",
+            data["ships"]
+        )
+
+        print(
+            "ناقلات محتملة:",
+            data["tankers"]
+        )
+
+        print(
+            "درجة المخاطر:",
+            data["risk_score"]
+        )
+
+        print(
+            "مستوى المخاطر:",
+            data["risk_level"]
+        )
 
 
-    report = {}
-
-
-    for name, zone in CHOKEPOINTS.items():
-
-        detected = []
-
-
-        for vessel in vessels:
-
-            if check_zone(
-                vessel,
-                zone
-            ):
-                detected.append(vessel)
+    print()
+    print("=" * 50)
+    print("اكتمل محرك الذكاء البحري")
+    print("=" * 50)
 
 
 
-        risk_score = 0
+if __name__ == "__main__":
 
-
-        if len(detected) > 20:
-            risk_score += 40
-
-        elif len(detected) > 5:
-            risk_score += 20
-
-
-
-        report[name] = {
-
-            "vessels": len(detected),
-
-            "risk_score": risk_score,
-
-            "risk_level":
-                (
-                    "HIGH"
-                    if risk_score >= 70
-                    else
-                    "MEDIUM"
-                    if risk_score >= 30
-                    else
-                    "LOW"
-                )
-
-        }
-
-
-    return report
+    asyncio.run(main())
