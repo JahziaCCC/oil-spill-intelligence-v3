@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from ais.collector import collect_ais
 from intelligence.maritime_engine import analyze_maritime
+from intelligence.trend_engine import calculate_trend
 
 
 
@@ -12,6 +13,7 @@ print("Strategic Maritime Intelligence Engine")
 print("=" * 60)
 
 
+
 time_now = datetime.now(
     timezone.utc
 ).strftime(
@@ -19,7 +21,11 @@ time_now = datetime.now(
 )
 
 
-print("وقت التشغيل :", time_now)
+print(
+    "وقت التشغيل :",
+    time_now
+)
+
 print()
 
 
@@ -36,6 +42,7 @@ vessels = asyncio.run(
 
 
 print()
+
 print("=" * 60)
 print("ملخص نظام AIS")
 print("=" * 60)
@@ -46,9 +53,11 @@ print(
     len(vessels)
 )
 
+
 print(
     "تم تحديث سجل المسارات"
 )
+
 
 print(
     "عدد السفن المتتبعة:",
@@ -72,6 +81,7 @@ risk_report = analyze_maritime(
 
 
 print()
+
 print("=" * 60)
 print("تقرير المخاطر البحرية")
 print("=" * 60)
@@ -109,6 +119,15 @@ for name, data in risk_report.items():
     score = data.get(
         "risk_score",
         0
+    )
+
+
+
+    # تحليل اتجاه المخاطر
+
+    trend_data = calculate_trend(
+        name,
+        score
     )
 
 
@@ -198,6 +217,22 @@ for name, data in risk_report.items():
 
 
     print(
+        "اتجاه المخاطر       :",
+        trend_data.get(
+            "trend"
+        )
+    )
+
+
+    print(
+        "تغير الدرجة         :",
+        trend_data.get(
+            "change"
+        )
+    )
+
+
+    print(
         "مستوى المخاطر       :",
         data.get(
             "risk_level",
@@ -225,15 +260,19 @@ for name, data in risk_report.items():
 
 
 
+
+
 # ==========================
 # EXECUTIVE SUMMARY
 # ==========================
 
 
 print()
+
 print("=" * 60)
 print("الملخص التنفيذي")
 print("=" * 60)
+
 
 
 print(
@@ -242,10 +281,12 @@ print(
 )
 
 
+
 print(
     "أعلى منطقة خطورة :",
     highest
 )
+
 
 
 print(
@@ -259,13 +300,16 @@ if highest_score >= 75:
 
     status = "🔴 حرج"
 
+
 elif highest_score >= 50:
 
     status = "🟠 مرتفع"
 
+
 elif highest_score >= 25:
 
     status = "🟡 متوسط"
+
 
 else:
 
@@ -277,6 +321,7 @@ print(
     "الحالة العامة :",
     status
 )
+
 
 
 print("=" * 60)
