@@ -2,6 +2,7 @@ import asyncio
 
 from ais.collector import collect_ais
 from ais.tracker import update_track
+from intelligence.maritime_risk import calculate_risk
 
 
 def print_header():
@@ -14,7 +15,7 @@ def print_header():
 
 
 
-def print_summary(vessels, tracks):
+def print_ais_summary(vessels, tracks):
 
     print()
     print("=" * 50)
@@ -22,16 +23,14 @@ def print_summary(vessels, tracks):
     print("=" * 50)
 
     print("عدد السفن المرصودة:", len(vessels))
-
     print("تم تحديث سجل المسارات")
-
     print("عدد السفن المتتبعة:", len(tracks))
 
     print("=" * 50)
 
 
 
-def generate_report(vessels):
+def print_maritime_report(report):
 
     print()
     print("=" * 50)
@@ -39,81 +38,15 @@ def generate_report(vessels):
     print("=" * 50)
 
 
-    chokepoints = {
-
-        "مضيق هرمز": {
-            "lat": 26.5,
-            "lon": 56.5
-        },
-
-        "باب المندب": {
-            "lat": 12.5,
-            "lon": 43.5
-        },
-
-        "قناة السويس": {
-            "lat": 30.5,
-            "lon": 32.3
-        }
-
-    }
-
-
-    for name, point in chokepoints.items():
-
-        count = 0
-
-
-        for vessel in vessels:
-
-            lat = vessel.get("lat")
-            lon = vessel.get("lon")
-
-
-            if not lat or not lon:
-                continue
-
-
-            distance = (
-                abs(lat - point["lat"])
-                +
-                abs(lon - point["lon"])
-            )
-
-
-            if distance < 5:
-
-                count += 1
-
-
-
-        risk = "منخفض"
-
-        score = 0
-
-
-        if count > 20:
-
-            risk = "متوسط"
-            score = 40
-
-
-        elif count > 50:
-
-            risk = "مرتفع"
-            score = 70
-
-
+    for area, data in report.items():
 
         print()
-        print(name)
+        print(area)
 
-        print("عدد السفن:", count)
-
-        print("درجة المخاطر:", score)
-
-        print("مستوى المخاطر:", risk)
-
+        print("عدد السفن:", data["ships"])
+        print("ناقلات محتملة:", data["tankers"])
+        print("درجة المخاطر:", data["risk_score"])
+        print("مستوى المخاطر:", data["risk_level"])
 
 
     print()
@@ -128,20 +61,30 @@ async def main():
     print_header()
 
 
+    # جمع بيانات السفن من AIS
+
     vessels = await collect_ais()
 
+
+    # تحديث مسارات السفن
 
     tracks = update_track(vessels)
 
 
-    print_summary(
+    # حساب مخاطر المضائق
+
+    risk_report = calculate_risk(vessels)
+
+
+
+    print_ais_summary(
         vessels,
         tracks
     )
 
 
-    generate_report(
-        vessels
+    print_maritime_report(
+        risk_report
     )
 
 
