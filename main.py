@@ -1,3 +1,5 @@
+import asyncio
+
 from ais.collector import collect_ais
 
 
@@ -6,17 +8,30 @@ print("Oil Spill Intelligence V3")
 print("AIS INTELLIGENCE ENGINE")
 print("=" * 50)
 
-print("")
-print("AIS Collector Starting...")
+print()
 
-vessels = collect_ais()
 
-print("")
-print("=" * 50)
-print("AIS SUMMARY")
-print("=" * 50)
+async def main():
 
-print("AIS Vessels Received:", len(vessels))
-print("AIS CACHE UPDATED")
+    vessels = await collect_ais(
+        duration=120
+    )
 
-print("=" * 50)
+
+    print()
+
+    print("FINAL REPORT")
+    print("=" * 50)
+
+    print(
+        "AIS Vessels Received:",
+        len(vessels)
+    )
+
+    print("=" * 50)
+
+
+
+if __name__ == "__main__":
+
+    asyncio.run(main())
