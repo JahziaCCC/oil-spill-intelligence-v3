@@ -1,66 +1,80 @@
 import os
 import json
 import asyncio
-import websockets
 from datetime import datetime
+
+import websockets
 
 
 AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
-AIS_API_KEY = os.getenv("AISSTREAM_API_KEY")
+AIS_CACHE_FILE = "data/ais_cache.json"
 
 
-def clean_name(name):
-    if not name:
-        return "UNKNOWN"
-    return name.strip()
+def save_cache(vessels):
+    os.makedirs("data", exist_ok=True)
+
+    with open(AIS_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(
+            vessels,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
 
 
-async def collect_ais_async(duration=120):
+async def collect_ais(duration=120):
+
+    print("AIS Collector Starting...")
+
+    api_key = os.getenv("AISSTREAM_API_KEY")
+
+    print(
+        f"AIS KEY EXISTS: {bool(api_key)} LENGTH: {len(api_key) if api_key else 0}"
+    )
+
+    if not api_key:
+        print("❌ Missing AISSTREAM_API_KEY")
+        return []
 
     vessels = {}
 
-    print("AIS Collector Starting...")
-    print(
-        "AIS KEY EXISTS:",
-        AIS_API_KEY is not None,
-        "LENGTH:",
-        len(AIS_API_KEY) if AIS_API_KEY else 0
-    )
+    subscription = {
+        "APIKey": api_key,
+        "BoundingBoxes": [
+            [
+                [20, 20],
+                [60, 45]
+            ]
+        ],
+        "FilterMessageTypes": [
+            "PositionReport"
+        ]
+    }
 
-    if not AIS_API_KEY:
-        print("❌ Missing AIS_API_KEY")
-        return []
 
     try:
 
         async with websockets.connect(
             AISSTREAM_URL,
-            ping_interval=20,
-            ping_timeout=20
+            ping_interval=None
         ) as websocket:
+
 
             print("✅ AIS Connected")
 
-            subscription = {
-                "APIKey": AIS_API_KEY,
-                "BoundingBoxes": [
-                    [
-                        [-40, -10],
-                        [60, 45]
-                    ]
-                ],
-                "FilterMessageTypes": [
-                    "PositionReport"
-                ]
-            }
 
-            await websocket.send(json.dumps(subscription))
+            await websocket.send(
+                json.dumps(subscription)
+            )
+
 
             print("✅ Subscription sent")
-            print("⏳ Waiting AIS messages...")
+            print("⏳ Collecting AIS data...")
 
-            start_time = datetime.utcnow()
+
+            start = datetime.utcnow()
+
 
             while True:
 
@@ -71,20 +85,29 @@ async def collect_ais_async(duration=120):
                         timeout=10
                     )
 
+
                     data = json.loads(message)
 
-                    if data.get("MessageType") != "PositionReport":
-                        continue
+
+                    meta = data.get(
+                        "MetaData",
+                        {}
+                    )
 
 
-                    meta = data.get("MetaData", {})
-                    position = data.get("Message", {}).get(
+                    position = data.get(
+                        "Message",
+                        {}
+                    ).get(
                         "PositionReport",
                         {}
                     )
 
 
-                    mmsi = meta.get("MMSI")
+                    mmsi = meta.get(
+                        "MMSI"
+                    )
+
 
                     if not mmsi:
                         continue
@@ -94,9 +117,10 @@ async def collect_ais_async(duration=120):
 
                         "mmsi": mmsi,
 
-                        "name": clean_name(
-                            meta.get("ShipName")
-                        ),
+                        "name": meta.get(
+                            "ShipName",
+                            "UNKNOWN"
+                        ).strip(),
 
                         "lat": position.get(
                             "Latitude"
@@ -119,40 +143,60 @@ async def collect_ais_async(duration=120):
                         "timestamp": meta.get(
                             "time_utc"
                         )
+
                     }
 
 
-                    vessels[mmsi] = vessel
+                    vessels[str(mmsi)] = vessel
 
 
-                    print("🚢", vessel)
-
-
-                    elapsed = (
+                    if (
                         datetime.utcnow()
-                        - start_time
-                    ).seconds
+                        -
+                        start
+                    ).seconds >= duration:
 
-
-                    if elapsed >= duration:
                         break
 
 
                 except asyncio.TimeoutError:
+
                     continue
+
 
 
     except Exception as e:
 
-        print("❌ AIS ERROR:", e)
+        print(
+            "AIS ERROR:",
+            e
+        )
 
 
-    return list(vessels.values())
 
-
-
-def collect_ais():
-
-    return asyncio.run(
-        collect_ais_async()
+    result = list(
+        vessels.values()
     )
+
+
+    save_cache(result)
+
+
+    print()
+    print("="*50)
+    print("AIS SUMMARY")
+    print("="*50)
+
+    print(
+        "AIS Vessels Received:",
+        len(result)
+    )
+
+    print(
+        "AIS CACHE UPDATED"
+    )
+
+    print("="*50)
+
+
+    return result
