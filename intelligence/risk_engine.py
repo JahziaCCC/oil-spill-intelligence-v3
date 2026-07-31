@@ -1,6 +1,6 @@
 # intelligence/risk_engine.py
 
-# محرك تقييم مخاطر المضائق البحرية
+# Strategic Maritime Risk Engine V4
 
 
 CHOKEPOINTS = {
@@ -9,7 +9,8 @@ CHOKEPOINTS = {
         "lat_min": 24.0,
         "lat_max": 28.0,
         "lon_min": 54.0,
-        "lon_max": 58.0
+        "lon_max": 58.0,
+        "impact": "Energy HIGH"
     },
 
 
@@ -17,7 +18,8 @@ CHOKEPOINTS = {
         "lat_min": 11.0,
         "lat_max": 14.0,
         "lon_min": 42.0,
-        "lon_max": 45.0
+        "lon_max": 45.0,
+        "impact": "Trade HIGH"
     },
 
 
@@ -25,7 +27,8 @@ CHOKEPOINTS = {
         "lat_min": 29.0,
         "lat_max": 32.5,
         "lon_min": 31.0,
-        "lon_max": 33.0
+        "lon_max": 33.0,
+        "impact": "Supply Chain HIGH"
     }
 
 }
@@ -35,15 +38,52 @@ CHOKEPOINTS = {
 def inside_area(lat, lon, area):
 
     return (
-
         area["lat_min"] <= lat <= area["lat_max"]
-
         and
-
         area["lon_min"] <= lon <= area["lon_max"]
-
     )
 
+
+
+def classify_ship(name):
+
+    name = name.upper()
+
+    tanker_words = [
+        "TANK",
+        "OIL",
+        "VLCC",
+        "LNG",
+        "GAS",
+        "CHEM",
+        "PETRO"
+    ]
+
+
+    strategic_words = [
+        "MSC",
+        "MAERSK",
+        "CMA",
+        "EVER",
+        "HAPAG",
+        "COSCO",
+        "ZIM"
+    ]
+
+
+    tanker = any(
+        x in name
+        for x in tanker_words
+    )
+
+
+    strategic = any(
+        x in name
+        for x in strategic_words
+    )
+
+
+    return tanker, strategic
 
 
 
@@ -59,7 +99,6 @@ def calculate_risk(vessels):
 
 
         detected = []
-
 
 
         for vessel in vessels:
@@ -79,17 +118,14 @@ def calculate_risk(vessels):
                 lon,
                 area
             ):
-
                 detected.append(vessel)
 
 
 
-
-
-        ship_count = len(detected)
-
+        ships = len(detected)
 
         tankers = 0
+        strategic = 0
         moving = 0
         stopped = 0
 
@@ -105,49 +141,47 @@ def calculate_risk(vessels):
 
 
             if speed and speed > 1:
-
                 moving += 1
-
             else:
-
                 stopped += 1
 
 
 
-
-            ship_name = ship.get(
-                "name",
-                ""
-            ).upper()
+            tanker, strategic_ship = classify_ship(
+                ship.get("name","")
+            )
 
 
-
-            tanker_keywords = [
-
-                "TANK",
-                "OIL",
-                "GAS",
-                "VLCC",
-                "CHEM",
-                "PETRO",
-                "LNG"
-
-            ]
-
-
-
-            if any(
-                word in ship_name
-                for word in tanker_keywords
-            ):
-
+            if tanker:
                 tankers += 1
 
 
+            if strategic_ship:
+                strategic += 1
 
 
 
-        # حساب درجة المخاطر
+
+        movement_density = 0
+
+        if ships:
+            movement_density = round(
+                (moving / ships) * 100,
+                1
+            )
+
+
+
+        tanker_ratio = 0
+
+        if ships:
+            tanker_ratio = round(
+                (tankers / ships) * 100,
+                1
+            )
+
+
+
 
         score = 0
 
@@ -155,26 +189,22 @@ def calculate_risk(vessels):
 
         # كثافة السفن
 
-        if ship_count >= 50:
-
+        if ships >= 50:
             score += 40
 
-        elif ship_count >= 20:
-
+        elif ships >= 25:
             score += 30
 
-        elif ship_count >= 10:
-
+        elif ships >= 10:
             score += 20
 
-        elif ship_count > 0:
-
+        elif ships > 0:
             score += 10
 
 
 
 
-        # ناقلات استراتيجية
+        # ناقلات
 
         score += min(
             tankers * 10,
@@ -183,25 +213,30 @@ def calculate_risk(vessels):
 
 
 
-
-        # مستوى الحركة
+        # حركة
 
         if moving >= 20:
-
             score += 20
 
         elif moving >= 10:
-
             score += 10
 
 
+
+
+        # سفن استراتيجية
+
+        score += min(
+            strategic * 5,
+            10
+        )
 
 
 
         if score >= 70:
 
             level = "مرتفع"
-
+            readiness = "مرتفع"
             recommendation = (
                 "رفع مستوى الجاهزية والمراقبة"
             )
@@ -210,7 +245,7 @@ def calculate_risk(vessels):
         elif score >= 40:
 
             level = "متوسط"
-
+            readiness = "متوسط"
             recommendation = (
                 "زيادة المتابعة والتحليل"
             )
@@ -219,34 +254,41 @@ def calculate_risk(vessels):
         else:
 
             level = "منخفض"
-
+            readiness = "منخفض"
             recommendation = (
                 "استمرار المراقبة"
             )
 
 
 
-
-
         report[name] = {
 
-            "ships": ship_count,
+
+            "ships": ships,
 
             "tankers": tankers,
+
+            "strategic": strategic,
 
             "moving": moving,
 
             "stopped": stopped,
 
+            "movement_density": movement_density,
+
+            "tanker_ratio": tanker_ratio,
+
+            "impact": area["impact"],
+
             "risk_score": score,
 
             "risk_level": level,
 
+            "readiness": readiness,
+
             "recommendation": recommendation
 
         }
-
-
 
 
 
