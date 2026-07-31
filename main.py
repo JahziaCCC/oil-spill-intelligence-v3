@@ -23,6 +23,7 @@ print("وقت التشغيل :", time_now)
 print()
 
 
+
 # ==========================
 # AIS COLLECTION
 # ==========================
@@ -60,7 +61,7 @@ print("=" * 60)
 
 
 # ==========================
-# RISK ENGINE
+# RISK ANALYSIS
 # ==========================
 
 
@@ -84,27 +85,32 @@ total_inside = 0
 
 
 
-for name,data in risk_report.items():
+for name, data in risk_report.items():
+
 
     print()
 
-    print("📍",name)
+    print("📍", name)
 
-    print("-"*40)
+    print("-" * 40)
 
 
-    ships=data.get(
+
+    ships = data.get(
         "ships",
-       0
+        0
     )
+
 
     total_inside += ships
 
 
-    score=data.get(
+
+    score = data.get(
         "risk_score",
-       0
+        0
     )
+
 
 
     if score > highest_score:
@@ -112,6 +118,15 @@ for name,data in risk_report.items():
         highest_score = score
         highest = name
 
+
+
+    print(
+        "الأهمية الاستراتيجية :",
+        data.get(
+            "impact",
+            "غير محدد"
+        )
+    )
 
 
     print(
@@ -124,7 +139,16 @@ for name,data in risk_report.items():
         "ناقلات النفط        :",
         data.get(
             "tankers",
-           0
+            0
+        )
+    )
+
+
+    print(
+        "سفن استراتيجية      :",
+        data.get(
+            "strategic",
+            0
         )
     )
 
@@ -133,7 +157,7 @@ for name,data in risk_report.items():
         "السفن المتحركة      :",
         data.get(
             "moving",
-           0
+            0
         )
     )
 
@@ -142,7 +166,7 @@ for name,data in risk_report.items():
         "السفن المتوقفة      :",
         data.get(
             "stopped",
-           0
+            0
         )
     )
 
@@ -150,8 +174,8 @@ for name,data in risk_report.items():
     print(
         "كثافة الحركة        :",
         data.get(
-            "traffic_density",
-           0
+            "movement_density",
+            0
         ),
         "%"
     )
@@ -161,7 +185,7 @@ for name,data in risk_report.items():
         "نسبة الناقلات       :",
         data.get(
             "tanker_ratio",
-           0
+            0
         ),
         "%"
     )
@@ -176,7 +200,8 @@ for name,data in risk_report.items():
     print(
         "مستوى المخاطر       :",
         data.get(
-            "risk_level"
+            "risk_level",
+            ""
         )
     )
 
@@ -184,7 +209,8 @@ for name,data in risk_report.items():
     print(
         "الجاهزية            :",
         data.get(
-            "readiness"
+            "readiness",
+            ""
         )
     )
 
@@ -192,7 +218,8 @@ for name,data in risk_report.items():
     print(
         "التوصية             :",
         data.get(
-            "recommendation"
+            "recommendation",
+            ""
         )
     )
 
@@ -228,21 +255,21 @@ print(
 
 
 
-if highest_score >=75:
+if highest_score >= 75:
 
-    status="🔴 حرج"
+    status = "🔴 حرج"
 
-elif highest_score>=50:
+elif highest_score >= 50:
 
-    status="🟠 مرتفع"
+    status = "🟠 مرتفع"
 
-elif highest_score>=25:
+elif highest_score >= 25:
 
-    status="🟡 متوسط"
+    status = "🟡 متوسط"
 
 else:
 
-    status="🟢 منخفض"
+    status = "🟢 منخفض"
 
 
 
@@ -253,6 +280,7 @@ print(
 
 
 print("=" * 60)
+
 
 print(
     "اكتمل تشغيل محرك الذكاء البحري"
