@@ -2,8 +2,10 @@ import asyncio
 from datetime import datetime, timezone
 
 from ais.collector import collect_ais
+
 from intelligence.maritime_engine import analyze_maritime
-from intelligence.trend_engine import calculate_trend
+
+from intelligence.threat_engine import analyze_threats
 
 
 
@@ -11,7 +13,6 @@ print("=" * 60)
 print("Oil Spill Intelligence V3")
 print("Strategic Maritime Intelligence Engine")
 print("=" * 60)
-
 
 
 time_now = datetime.now(
@@ -80,6 +81,18 @@ risk_report = analyze_maritime(
 
 
 
+# ==========================
+# THREAT INTELLIGENCE
+# ==========================
+
+
+threat_report = analyze_threats(
+    vessels,
+    risk_report
+)
+
+
+
 print()
 
 print("=" * 60)
@@ -89,6 +102,7 @@ print("=" * 60)
 
 
 highest = None
+
 highest_score = -1
 
 total_inside = 0
@@ -123,18 +137,10 @@ for name, data in risk_report.items():
 
 
 
-    # تحليل اتجاه المخاطر
-
-    trend_data = calculate_trend(
-        name,
-        score
-    )
-
-
-
     if score > highest_score:
 
         highest_score = score
+
         highest = name
 
 
@@ -142,10 +148,11 @@ for name, data in risk_report.items():
     print(
         "الأهمية الاستراتيجية :",
         data.get(
-            "impact",
-            "غير محدد"
+            "strategic_importance",
+            "N/A"
         )
     )
+
 
 
     print(
@@ -193,7 +200,7 @@ for name, data in risk_report.items():
     print(
         "كثافة الحركة        :",
         data.get(
-            "movement_density",
+            "traffic_density",
             0
         ),
         "%"
@@ -218,16 +225,18 @@ for name, data in risk_report.items():
 
     print(
         "اتجاه المخاطر       :",
-        trend_data.get(
-            "trend"
+        data.get(
+            "trend",
+            "🟢 مستقر"
         )
     )
 
 
     print(
         "تغير الدرجة         :",
-        trend_data.get(
-            "change"
+        data.get(
+            "change",
+            0
         )
     )
 
@@ -235,8 +244,7 @@ for name, data in risk_report.items():
     print(
         "مستوى المخاطر       :",
         data.get(
-            "risk_level",
-            ""
+            "risk_level"
         )
     )
 
@@ -244,8 +252,7 @@ for name, data in risk_report.items():
     print(
         "الجاهزية            :",
         data.get(
-            "readiness",
-            ""
+            "readiness"
         )
     )
 
@@ -253,8 +260,74 @@ for name, data in risk_report.items():
     print(
         "التوصية             :",
         data.get(
-            "recommendation",
-            ""
+            "recommendation"
+        )
+    )
+
+
+
+
+
+# ==========================
+# THREAT REPORT
+# ==========================
+
+
+print()
+
+print("=" * 60)
+print("تقرير التهديدات البحرية")
+print("=" * 60)
+
+
+
+for area, data in threat_report.items():
+
+
+    print()
+
+    print(
+        "📍",
+        area
+    )
+
+
+    print(
+        "مستوى التأثير:",
+        data.get(
+            "impact"
+        )
+    )
+
+
+    threats = data.get(
+        "threats",
+        []
+    )
+
+
+    if threats:
+
+        for threat in threats:
+
+            print(
+                "-",
+                threat["type"],
+                ":",
+                threat["count"]
+            )
+
+    else:
+
+        print(
+            "- لا توجد تهديدات مكتشفة"
+        )
+
+
+    print(
+        "التوصية:",
+        data.get(
+            "recommendation"
         )
     )
 
@@ -281,12 +354,10 @@ print(
 )
 
 
-
 print(
     "أعلى منطقة خطورة :",
     highest
 )
-
 
 
 print(
@@ -321,7 +392,6 @@ print(
     "الحالة العامة :",
     status
 )
-
 
 
 print("=" * 60)
