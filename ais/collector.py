@@ -29,7 +29,6 @@ def save_cache(vessels):
 
         "vessels":
             vessels
-
     }
 
 
@@ -85,7 +84,6 @@ def collect_ais():
 
     try:
 
-
         ws = websocket.create_connection(
 
             AIS_URL,
@@ -104,7 +102,6 @@ def collect_ais():
         subscribe_message = {
 
             "APIKey":
-
                 api_key,
 
 
@@ -164,7 +161,6 @@ def collect_ais():
 
             try:
 
-
                 message = ws.recv()
 
 
@@ -173,31 +169,67 @@ def collect_ais():
                 )
 
 
+                position = data.get(
+                    "PositionReport",
+                    {}
+                )
+
+
                 vessel = {
 
-    "mmsi":
-        data.get("MMSI"),
 
-    "name":
-        data.get("ShipName","UNKNOWN").strip(),
+                    "mmsi":
 
-    "lat":
-        data.get("latitude"),
-
-    "lon":
-        data.get("longitude"),
-
-    "time":
-        data.get("time_utc")
-
-}
+                        data.get(
+                            "MMSI"
+                        ),
 
 
-                    vessel["heading"] = position.get(
-                        "Cog",
-                        0
-                    )
+                    "name":
 
+                        data.get(
+                            "ShipName",
+                            "UNKNOWN"
+                        ).strip(),
+
+
+                    "lat":
+
+                        data.get(
+                            "latitude"
+                        ),
+
+
+                    "lon":
+
+                        data.get(
+                            "longitude"
+                        ),
+
+
+                    "time":
+
+                        data.get(
+                            "time_utc"
+                        ),
+
+
+                    "speed":
+
+                        position.get(
+                            "Sog",
+                            0
+                        ),
+
+
+                    "heading":
+
+                        position.get(
+                            "Cog",
+                            0
+                        )
+
+                }
 
 
                 vessels.append(
@@ -213,7 +245,6 @@ def collect_ais():
 
 
             except Exception as e:
-
 
                 print(
                     "⚠️ Receive Error:",
@@ -256,6 +287,7 @@ def collect_ais():
 
 
     return vessels
+
 
 
 
