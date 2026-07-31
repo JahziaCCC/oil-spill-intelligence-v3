@@ -1,30 +1,37 @@
 # intelligence/risk_engine.py
 
-# المناطق الاستراتيجية البحرية
+# محرك تقييم مخاطر المضائق البحرية
+
 
 CHOKEPOINTS = {
 
     "مضيق هرمز": {
-        "lat_min": 24,
-        "lat_max": 28,
-        "lon_min": 54,
-        "lon_max": 58
+
+        "lat_min": 24.0,
+        "lat_max": 28.0,
+        "lon_min": 54.0,
+        "lon_max": 58.0
+
     },
 
 
     "باب المندب": {
-        "lat_min": 11,
-        "lat_max": 14,
-        "lon_min": 42,
-        "lon_max": 45
+
+        "lat_min": 11.0,
+        "lat_max": 14.0,
+        "lon_min": 42.0,
+        "lon_max": 45.0
+
     },
 
 
     "قناة السويس": {
+
         "lat_min": 29.0,
-        "lat_max": 32.8,
-        "lon_min": 29.0,
-        "lon_max": 34.5
+        "lat_max": 32.5,
+        "lon_min": 31.0,
+        "lon_max": 33.0
+
     }
 
 }
@@ -34,10 +41,15 @@ CHOKEPOINTS = {
 def inside_area(lat, lon, area):
 
     return (
+
         area["lat_min"] <= lat <= area["lat_max"]
+
         and
+
         area["lon_min"] <= lon <= area["lon_max"]
+
     )
+
 
 
 
@@ -45,13 +57,24 @@ def inside_area(lat, lon, area):
 def calculate_risk(vessels):
 
 
+    print()
+
+    print("=" * 50)
+    print("تشغيل محرك تحليل المخاطر البحرية")
+    print("=" * 50)
+
+    print("السفن الداخلة للتحليل:", len(vessels))
+
+
     report = {}
+
 
 
     for name, area in CHOKEPOINTS.items():
 
 
         detected = []
+
 
 
         for vessel in vessels:
@@ -65,6 +88,7 @@ def calculate_risk(vessels):
                 continue
 
 
+
             if inside_area(
                 lat,
                 lon,
@@ -75,8 +99,9 @@ def calculate_risk(vessels):
 
 
 
-        count = len(detected)
 
+
+        ship_count = len(detected)
 
 
         tankers = 0
@@ -88,40 +113,56 @@ def calculate_risk(vessels):
         for ship in detected:
 
 
-            speed = ship.get("speed",0)
+            speed = ship.get(
+                "speed",
+                0
+            )
 
 
             if speed and speed > 1:
+
                 moving += 1
+
             else:
+
                 stopped += 1
 
 
 
-            name_ship = ship.get(
+
+            ship_name = ship.get(
                 "name",
                 ""
             ).upper()
 
 
 
-            keywords = [
+            tanker_keywords = [
+
                 "TANK",
                 "OIL",
                 "GAS",
                 "VLCC",
                 "CHEM",
-                "PETRO"
+                "PETRO",
+                "LNG"
+
             ]
 
 
+
             if any(
-                k in name_ship
-                for k in keywords
+                word in ship_name
+                for word in tanker_keywords
             ):
+
                 tankers += 1
 
 
+
+
+
+        # حساب درجة المخاطر
 
         score = 0
 
@@ -129,37 +170,51 @@ def calculate_risk(vessels):
 
         # كثافة السفن
 
-        if count >= 50:
+        if ship_count >= 50:
+
             score += 40
 
-        elif count >= 20:
+        elif ship_count >= 20:
+
             score += 30
 
-        elif count >= 5:
+        elif ship_count >= 10:
+
             score += 20
 
-        elif count > 0:
+        elif ship_count > 0:
+
             score += 10
 
 
 
-        # ناقلات
+
+        # ناقلات استراتيجية
 
         score += min(
-            tankers * 5,
+            tankers * 10,
             30
         )
 
 
 
-        # الحركة
 
-        if moving > 20:
+        # مستوى الحركة
+
+        if moving >= 20:
+
             score += 20
+
+        elif moving >= 10:
+
+            score += 10
+
+
 
 
 
         if score >= 70:
+
 
             level = "مرتفع"
 
@@ -167,7 +222,9 @@ def calculate_risk(vessels):
                 "رفع مستوى الجاهزية والمراقبة"
             )
 
+
         elif score >= 40:
+
 
             level = "متوسط"
 
@@ -175,7 +232,9 @@ def calculate_risk(vessels):
                 "زيادة المتابعة والتحليل"
             )
 
+
         else:
+
 
             level = "منخفض"
 
@@ -185,10 +244,12 @@ def calculate_risk(vessels):
 
 
 
+
+
         report[name] = {
 
 
-            "ships": count,
+            "ships": ship_count,
 
             "tankers": tankers,
 
@@ -202,7 +263,10 @@ def calculate_risk(vessels):
 
             "recommendation": recommendation
 
+
         }
+
+
 
 
 
