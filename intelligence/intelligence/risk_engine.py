@@ -1,254 +1,197 @@
 # intelligence/risk_engine.py
 
-def classify_vessel(vessel):
+CHOKEPOINTS = {
 
-    name = vessel.get(
-        "name",
-        ""
-    ).upper()
+    "مضيق هرمز": {
+        "lat_min": 24,
+        "lat_max": 28,
+        "lon_min": 54,
+        "lon_max": 58
+    },
 
+    "باب المندب": {
+        "lat_min": 11,
+        "lat_max": 14,
+        "lon_min": 42,
+        "lon_max": 45
+    },
 
-    if any(
-        x in name
-        for x in [
-            "TANK",
-            "OIL",
-            "GAS",
-            "VLCC",
-            "LNG",
-            "CHEM"
-        ]
-    ):
-        return "ناقلات"
+    "قناة السويس": {
+        "lat_min": 29,
+        "lat_max": 32,
+        "lon_min": 31,
+        "lon_max": 33
+    }
 
-
-
-    if any(
-        x in name
-        for x in [
-            "MSC",
-            "MAERSK",
-            "CMA CGM",
-            "HAPAG",
-            "COSCO"
-        ]
-    ):
-        return "حاويات"
+}
 
 
 
-    return "أخرى"
+def inside_zone(vessel, zone):
+
+    lat = vessel.get("lat")
+    lon = vessel.get("lon")
+
+    if lat is None or lon is None:
+        return False
 
 
-
-
-
-
-
-def calculate_risk(
-    vessels,
-    zone_name
-):
-
-
-    total = len(vessels)
-
-
-    tankers = 0
-    containers = 0
-    moving = 0
-    stopped = 0
-
-
-
-    for vessel in vessels:
-
-
-        category = classify_vessel(
-            vessel
-        )
-
-
-        if category == "ناقلات":
-            tankers += 1
-
-
-        elif category == "حاويات":
-            containers += 1
+    return (
+        zone["lat_min"] <= lat <= zone["lat_max"]
+        and
+        zone["lon_min"] <= lon <= zone["lon_max"]
+    )
 
 
 
 
-        speed = vessel.get(
-            "speed",
-            0
-        )
+
+def detect_tanker(vessel):
+
+    name = vessel.get("name","").upper()
+
+    keywords = [
+        "TANK",
+        "OIL",
+        "VLCC",
+        "LNG",
+        "GAS",
+        "CHEM"
+    ]
+
+    return any(k in name for k in keywords)
 
 
 
-        if speed and speed > 1:
 
-            moving += 1
+
+def calculate_risk(vessels):
+
+
+    report = {}
+
+
+
+    for zone_name, zone in CHOKEPOINTS.items():
+
+
+        ships = []
+
+
+        for vessel in vessels:
+
+            if inside_zone(vessel, zone):
+                ships.append(vessel)
+
+
+
+        total = len(ships)
+
+
+
+        tankers = 0
+        moving = 0
+        stopped = 0
+
+
+
+        for ship in ships:
+
+
+            if detect_tanker(ship):
+                tankers += 1
+
+
+            speed = ship.get("speed",0)
+
+
+            if speed > 1:
+                moving += 1
+            else:
+                stopped += 1
+
+
+
+
+        score = 0
+
+
+        # كثافة السفن
+
+        if total >= 30:
+            score += 40
+
+        elif total >= 10:
+            score += 25
+
+        elif total > 0:
+            score += 10
+
+
+
+        # ناقلات
+
+        score += min(tankers * 10,30)
+
+
+
+        # الحركة
+
+        if moving > 20:
+            score += 20
+
+
+
+        elif moving > 5:
+            score += 10
+
+
+
+        # التوقفات
+
+        if stopped > 15:
+            score += 15
+
+
+
+
+        if score >= 70:
+
+            level = "مرتفع"
+            recommendation = "رفع مستوى الجاهزية والمراقبة"
+
+        elif score >= 40:
+
+            level = "متوسط"
+            recommendation = "زيادة المتابعة والتحليل"
 
         else:
 
-            stopped += 1
+            level = "منخفض"
+            recommendation = "استمرار المراقبة"
 
 
 
 
+        report[zone_name] = {
 
-    score = 0
 
+            "vessels": total,
 
+            "tankers": tankers,
 
-    # كثافة السفن
+            "moving": moving,
 
-    if total >= 50:
+            "stopped": stopped,
 
-        score += 35
+            "risk_score": score,
 
-    elif total >= 20:
+            "risk_level": level,
 
-        score += 25
+            "recommendation": recommendation
 
-    elif total >= 5:
+        }
 
-        score += 10
 
 
-
-
-
-    # ناقلات الطاقة
-
-    score += min(
-        tankers * 8,
-        25
-    )
-
-
-
-    # سفن الحاويات
-
-    score += min(
-        containers * 3,
-        15
-    )
-
-
-
-
-    # حركة السفن
-
-    if moving > stopped:
-
-        score += 10
-
-
-
-    # التوقف داخل المنطقة
-
-    if stopped >= 15:
-
-        score += 15
-
-
-
-
-
-    # أهمية المضيق
-
-    if zone_name == "مضيق هرمز":
-
-        score += 10
-
-
-
-    elif zone_name == "باب المندب":
-
-        score += 8
-
-
-
-    elif zone_name == "قناة السويس":
-
-        score += 10
-
-
-
-
-
-    if score >= 70:
-
-        level = "مرتفع"
-
-
-
-    elif score >= 40:
-
-        level = "متوسط"
-
-
-
-    else:
-
-        level = "منخفض"
-
-
-
-
-
-
-    if level == "مرتفع":
-
-        recommendation = "رفع مستوى الجاهزية والمراقبة"
-
-    elif level == "متوسط":
-
-        recommendation = "تعزيز المتابعة"
-
-    else:
-
-        recommendation = "استمرار المراقبة"
-
-
-
-
-
-
-    return {
-
-
-        "السفن":
-            total,
-
-
-        "ناقلات":
-            tankers,
-
-
-        "حاويات":
-            containers,
-
-
-        "متحركة":
-            moving,
-
-
-        "متوقفة":
-            stopped,
-
-
-        "درجة":
-            min(score,100),
-
-
-        "المستوى":
-            level,
-
-
-        "التوصية":
-            recommendation
-
-    }
+    return report
