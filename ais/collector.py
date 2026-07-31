@@ -7,7 +7,7 @@ from datetime import datetime
 
 AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
-AIS_API_KEY = os.getenv("AIS_API_KEY")
+AIS_API_KEY = os.getenv("AISSTREAM_API_KEY")
 
 
 def clean_name(name):
