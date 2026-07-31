@@ -30,6 +30,7 @@ def save_cache(vessels):
 
         "vessels":
             vessels
+
     }
 
 
@@ -103,7 +104,6 @@ def collect_ais():
         subscribe_message = {
 
             "APIKey":
-
                 api_key,
 
 
@@ -113,9 +113,9 @@ def collect_ais():
 
                 [
 
-                    [10.0, 30.0],
+                    [10.0,30.0],
 
-                    [35.0, 60.0]
+                    [35.0,60.0]
 
                 ]
 
@@ -154,58 +154,119 @@ def collect_ais():
 
         start = time.time()
 
-        printed_sample = False
 
 
-
-        while time.time() - start < 60:
-
-
-            message = ws.recv()
+        while time.time() - start < 120:
 
 
-            data = json.loads(
-                message
-            )
+            try:
+
+                message = ws.recv()
 
 
-            # طباعة أول رسالة لمعرفة شكلها
-            if not printed_sample:
-
-                print(
-                    "========== RAW AIS MESSAGE =========="
+                data = json.loads(
+                    message
                 )
 
-                print(
-                    json.dumps(
-                        data,
-                        indent=2
+
+
+                metadata = data.get(
+                    "MetaData",
+                    {}
+                )
+
+
+                position = data.get(
+                    "Message",
+                    {}
+                ).get(
+                    "PositionReport",
+                    {}
+                )
+
+
+
+                vessel = {
+
+
+                    "mmsi":
+
+                        metadata.get(
+                            "MMSI"
+                        ),
+
+
+                    "name":
+
+                        metadata.get(
+                            "ShipName",
+                            "UNKNOWN"
+                        ).strip(),
+
+
+                    "lat":
+
+                        metadata.get(
+                            "latitude"
+                        ),
+
+
+                    "lon":
+
+                        metadata.get(
+                            "longitude"
+                        ),
+
+
+                    "speed":
+
+                        position.get(
+                            "Sog",
+                            0
+                        ),
+
+
+                    "heading":
+
+                        position.get(
+                            "Cog",
+                            0
+                        ),
+
+
+                    "timestamp":
+
+                        metadata.get(
+                            "time_utc"
+                        )
+
+                }
+
+
+
+                if vessel["lat"] and vessel["lon"]:
+
+
+                    vessels.append(
+                        vessel
                     )
-                )
+
+
+                    print(
+                        "🚢",
+                        vessel
+                    )
+
+
+
+            except Exception as e:
 
                 print(
-                    "====================================="
+                    "⚠️ Receive Error:",
+                    e
                 )
 
-                printed_sample = True
-
-
-
-            vessel = {
-
-                "raw": data
-
-            }
-
-
-            vessels.append(
-                vessel
-            )
-
-
-            print(
-                "🚢 AIS MESSAGE RECEIVED"
-            )
+                break
 
 
 
