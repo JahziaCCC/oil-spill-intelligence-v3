@@ -10,6 +10,7 @@ AIS_URL = "wss://stream.aisstream.io/v0/stream"
 CACHE_FILE = "cache/ais_cache.json"
 
 
+
 def save_cache(vessels):
 
     os.makedirs(
@@ -102,6 +103,7 @@ def collect_ais():
         subscribe_message = {
 
             "APIKey":
+
                 api_key,
 
 
@@ -133,11 +135,9 @@ def collect_ais():
 
 
         ws.send(
-
             json.dumps(
                 subscribe_message
             )
-
         )
 
 
@@ -147,111 +147,65 @@ def collect_ais():
 
 
         print(
-            "⏳ Waiting AIS messages (120 seconds)..."
+            "⏳ Waiting AIS messages..."
         )
 
 
 
         start = time.time()
 
+        printed_sample = False
 
 
-        while time.time() - start < 120:
+
+        while time.time() - start < 60:
 
 
-            try:
-
-                message = ws.recv()
+            message = ws.recv()
 
 
-                data = json.loads(
-                    message
-                )
+            data = json.loads(
+                message
+            )
 
 
-                position = data.get(
-                    "PositionReport",
-                    {}
-                )
-
-
-                vessel = {
-
-
-                    "mmsi":
-
-                        data.get(
-                            "MMSI"
-                        ),
-
-
-                    "name":
-
-                        data.get(
-                            "ShipName",
-                            "UNKNOWN"
-                        ).strip(),
-
-
-                    "lat":
-
-                        data.get(
-                            "latitude"
-                        ),
-
-
-                    "lon":
-
-                        data.get(
-                            "longitude"
-                        ),
-
-
-                    "time":
-
-                        data.get(
-                            "time_utc"
-                        ),
-
-
-                    "speed":
-
-                        position.get(
-                            "Sog",
-                            0
-                        ),
-
-
-                    "heading":
-
-                        position.get(
-                            "Cog",
-                            0
-                        )
-
-                }
-
-
-                vessels.append(
-                    vessel
-                )
-
+            # طباعة أول رسالة لمعرفة شكلها
+            if not printed_sample:
 
                 print(
-                    "🚢",
-                    vessel
+                    "========== RAW AIS MESSAGE =========="
                 )
-
-
-
-            except Exception as e:
 
                 print(
-                    "⚠️ Receive Error:",
-                    e
+                    json.dumps(
+                        data,
+                        indent=2
+                    )
                 )
 
-                break
+                print(
+                    "====================================="
+                )
+
+                printed_sample = True
+
+
+
+            vessel = {
+
+                "raw": data
+
+            }
+
+
+            vessels.append(
+                vessel
+            )
+
+
+            print(
+                "🚢 AIS MESSAGE RECEIVED"
+            )
 
 
 
@@ -260,7 +214,6 @@ def collect_ais():
 
 
     except Exception as e:
-
 
         print(
             "❌ AIS Error:",
@@ -281,8 +234,7 @@ def collect_ais():
 
 
     print(
-        "✅ AIS CACHE UPDATED:",
-        len(vessels)
+        "✅ AIS CACHE UPDATED"
     )
 
 
