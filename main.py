@@ -304,7 +304,7 @@ if highest_score >=70:
 
 elif highest_score >=50:
 
-    status="🟠 مرتفع"
+    status="🟠 يحتاج متابعة مكثفة"
 
 elif highest_score >=25:
 
