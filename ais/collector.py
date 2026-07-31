@@ -9,25 +9,26 @@ AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 AIS_CACHE_FILE = "data/ais_cache.json"
 
 
-# المناطق الاستراتيجية
+# نطاقات المراقبة الاستراتيجية
+# جنوب الخليج + هرمز
+# البحر الأحمر + باب المندب
+# قناة السويس ومحيطها
+
 BBOXES = [
 
-    # مضيق هرمز
     [
-        [24.0, 54.0],
-        [28.0, 60.0]
+        [22.0, 50.0],
+        [30.0, 62.0]
     ],
 
-    # باب المندب
     [
-        [11.0, 40.0],
-        [15.0, 45.0]
+        [8.0, 38.0],
+        [16.0, 47.0]
     ],
 
-    # قناة السويس
     [
-        [29.0, 31.0],
-        [32.0, 33.5]
+        [27.0, 29.0],
+        [33.0, 35.0]
     ]
 
 ]
@@ -69,7 +70,9 @@ async def collect_ais():
 
     if not api_key:
 
-        print("❌ Missing AISSTREAM_API_KEY")
+        print(
+            "❌ Missing AISSTREAM_API_KEY"
+        )
 
         return []
 
@@ -92,7 +95,9 @@ async def collect_ais():
         ) as websocket:
 
 
-            print("✅ AIS Connected")
+            print(
+                "✅ AIS Connected"
+            )
 
 
             subscription = {
@@ -108,23 +113,32 @@ async def collect_ais():
             }
 
 
+
             await websocket.send(
                 json.dumps(subscription)
             )
 
 
-            print("✅ Subscription sent")
-            print("⏳ Collecting AIS data...")
+            print(
+                "✅ Subscription sent"
+            )
+
+            print(
+                "⏳ Collecting AIS data..."
+            )
 
 
 
-            start = asyncio.get_event_loop().time()
+            start_time = (
+                asyncio.get_event_loop()
+                .time()
+            )
 
 
             while (
                 asyncio.get_event_loop().time()
                 -
-                start
+                start_time
                 <
                 60
             ):
@@ -200,9 +214,21 @@ async def collect_ais():
                         }
 
 
+
                         vessels.append(
                             vessel
                         )
+
+
+                        # طباعة مؤقتة للتأكد من المواقع
+                        print(
+                            "🚢",
+                            vessel["name"],
+                            "|",
+                            vessel["lat"],
+                            vessel["lon"]
+                        )
+
 
 
                 except asyncio.TimeoutError:
@@ -225,19 +251,24 @@ async def collect_ais():
     )
 
 
+
     print()
+
     print("=" * 50)
     print("AIS SUMMARY")
     print("=" * 50)
+
 
     print(
         "AIS Vessels Received:",
         len(vessels)
     )
 
+
     print(
         "AIS CACHE UPDATED"
     )
+
 
     print("=" * 50)
 
