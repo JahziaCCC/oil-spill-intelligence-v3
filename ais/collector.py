@@ -1,8 +1,6 @@
 import os
 import json
 import asyncio
-from datetime import datetime
-
 import websockets
 
 
@@ -11,10 +9,44 @@ AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 AIS_CACHE_FILE = "data/ais_cache.json"
 
 
-def save_cache(vessels):
-    os.makedirs("data", exist_ok=True)
+# المناطق الاستراتيجية
+BBOXES = [
 
-    with open(AIS_CACHE_FILE, "w", encoding="utf-8") as f:
+    # مضيق هرمز
+    [
+        [24.0, 54.0],
+        [28.0, 60.0]
+    ],
+
+    # باب المندب
+    [
+        [11.0, 40.0],
+        [15.0, 45.0]
+    ],
+
+    # قناة السويس
+    [
+        [29.0, 31.0],
+        [32.0, 33.5]
+    ]
+
+]
+
+
+
+def save_cache(vessels):
+
+    os.makedirs(
+        "data",
+        exist_ok=True
+    )
+
+    with open(
+        AIS_CACHE_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
         json.dump(
             vessels,
             f,
@@ -23,45 +55,57 @@ def save_cache(vessels):
         )
 
 
-async def collect_ais(duration=120):
 
+async def collect_ais():
+
+    print()
     print("AIS Collector Starting...")
 
-    api_key = os.getenv("AISSTREAM_API_KEY")
 
-    print(
-        f"AIS KEY EXISTS: {bool(api_key)} LENGTH: {len(api_key) if api_key else 0}"
+    api_key = os.getenv(
+        "AISSTREAM_API_KEY"
     )
 
+
     if not api_key:
+
         print("❌ Missing AISSTREAM_API_KEY")
+
         return []
 
-    vessels = {}
 
-    subscription = {
-        "APIKey": api_key,
-        "BoundingBoxes": [
-            [
-                [20, 20],
-                [60, 45]
-            ]
-        ],
-        "FilterMessageTypes": [
-            "PositionReport"
-        ]
-    }
+
+    print(
+        "AIS KEY EXISTS: True LENGTH:",
+        len(api_key)
+    )
+
+
+
+    vessels = []
 
 
     try:
 
         async with websockets.connect(
-            AISSTREAM_URL,
-            ping_interval=None
+            AISSTREAM_URL
         ) as websocket:
 
 
             print("✅ AIS Connected")
+
+
+            subscription = {
+
+                "APIKey": api_key,
+
+                "BoundingBoxes": BBOXES,
+
+                "FilterMessageTypes": [
+                    "PositionReport"
+                ]
+
+            }
 
 
             await websocket.send(
@@ -73,10 +117,18 @@ async def collect_ais(duration=120):
             print("⏳ Collecting AIS data...")
 
 
-            start = datetime.utcnow()
+
+            start = asyncio.get_event_loop().time()
 
 
-            while True:
+            while (
+                asyncio.get_event_loop().time()
+                -
+                start
+                <
+                60
+            ):
+
 
                 try:
 
@@ -86,77 +138,71 @@ async def collect_ais(duration=120):
                     )
 
 
-                    data = json.loads(message)
-
-
-                    meta = data.get(
-                        "MetaData",
-                        {}
+                    data = json.loads(
+                        message
                     )
 
 
-                    position = data.get(
-                        "Message",
-                        {}
-                    ).get(
-                        "PositionReport",
-                        {}
+                    position = (
+                        data
+                        .get("Message", {})
+                        .get("PositionReport")
                     )
 
 
-                    mmsi = meta.get(
-                        "MMSI"
+                    metadata = (
+                        data
+                        .get("MetaData", {})
                     )
 
 
-                    if not mmsi:
-                        continue
+                    if position:
 
 
-                    vessel = {
+                        vessel = {
 
-                        "mmsi": mmsi,
+                            "mmsi":
+                                metadata.get(
+                                    "MMSI"
+                                ),
 
-                        "name": meta.get(
-                            "ShipName",
-                            "UNKNOWN"
-                        ).strip(),
+                            "name":
+                                metadata.get(
+                                    "ShipName",
+                                    ""
+                                ).strip(),
 
-                        "lat": position.get(
-                            "Latitude"
-                        ),
+                            "lat":
+                                position.get(
+                                    "Latitude"
+                                ),
 
-                        "lon": position.get(
-                            "Longitude"
-                        ),
+                            "lon":
+                                position.get(
+                                    "Longitude"
+                                ),
 
-                        "speed": position.get(
-                            "Sog",
-                            0
-                        ),
+                            "speed":
+                                position.get(
+                                    "Sog"
+                                ),
 
-                        "heading": position.get(
-                            "TrueHeading",
-                            0
-                        ),
+                            "heading":
+                                position.get(
+                                    "TrueHeading"
+                                ),
 
-                        "timestamp": meta.get(
-                            "time_utc"
+                            "timestamp":
+                                metadata.get(
+                                    "time_utc"
+                                )
+
+                        }
+
+
+                        vessels.append(
+                            vessel
                         )
-
-                    }
-
-
-                    vessels[str(mmsi)] = vessel
-
-
-                    if (
-                        datetime.utcnow()
-                        -
-                        start
-                    ).seconds >= duration:
-
-                        break
 
 
                 except asyncio.TimeoutError:
@@ -174,29 +220,27 @@ async def collect_ais(duration=120):
 
 
 
-    result = list(
-        vessels.values()
+    save_cache(
+        vessels
     )
 
 
-    save_cache(result)
-
-
     print()
-    print("="*50)
+    print("=" * 50)
     print("AIS SUMMARY")
-    print("="*50)
+    print("=" * 50)
 
     print(
         "AIS Vessels Received:",
-        len(result)
+        len(vessels)
     )
 
     print(
         "AIS CACHE UPDATED"
     )
 
-    print("="*50)
+    print("=" * 50)
 
 
-    return result
+
+    return vessels
