@@ -150,7 +150,7 @@ def collect_ais():
         )
 
 
-        while time.time() - start < 30:
+        while time.time() - start < 120:
 
 
             message = ws.recv()
