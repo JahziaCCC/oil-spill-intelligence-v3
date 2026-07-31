@@ -1,40 +1,73 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ais.collector import collect_ais
 from intelligence.maritime_engine import analyze_maritime
+
 
 
 print("=" * 60)
 print("Oil Spill Intelligence V3")
 print("Strategic Maritime Intelligence Engine")
 print("=" * 60)
-print("وقت التشغيل :", datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"))
+
+
+time_now = datetime.now(
+    timezone.utc
+).strftime(
+    "%Y-%m-%d %H:%M UTC"
+)
+
+
+print("وقت التشغيل :", time_now)
 print()
 
 
-# ======================================================
-# Collect AIS
-# ======================================================
+# ==========================
+# AIS COLLECTION
+# ==========================
 
-vessels = asyncio.run(collect_ais())
+
+vessels = asyncio.run(
+    collect_ais()
+)
+
 
 
 print()
 print("=" * 60)
-print("ملخص بيانات AIS")
-print("=" * 60)
-print("عدد السفن المستلمة :", len(vessels))
-print("تم تحديث قاعدة البيانات")
-print("جاهزية النظام : مكتمل")
+print("ملخص نظام AIS")
 print("=" * 60)
 
 
-# ======================================================
-# Analyze
-# ======================================================
+print(
+    "عدد السفن المرصودة:",
+    len(vessels)
+)
 
-risk_report = analyze_maritime(vessels)
+print(
+    "تم تحديث سجل المسارات"
+)
+
+print(
+    "عدد السفن المتتبعة:",
+    len(vessels)
+)
+
+
+print("=" * 60)
+
+
+
+# ==========================
+# RISK ENGINE
+# ==========================
+
+
+risk_report = analyze_maritime(
+    vessels
+)
+
 
 
 print()
@@ -43,36 +76,131 @@ print("تقرير المخاطر البحرية")
 print("=" * 60)
 
 
-highest = ("", 0)
-total = 0
+
+highest = None
+highest_score = -1
+
+total_inside = 0
 
 
-for name, data in risk_report.items():
+
+for name,data in risk_report.items():
 
     print()
 
-    print("📍", name)
-    print("-" * 40)
+    print("📍",name)
 
-    print("عدد السفن           :", data["ships"])
-    print("ناقلات النفط        :", data["tankers"])
+    print("-"*40)
 
-    if "moving" in data:
-        print("السفن المتحركة      :", data["moving"])
 
-    if "stopped" in data:
-        print("السفن المتوقفة      :", data["stopped"])
+    ships=data.get(
+        "ships",
+       0
+    )
 
-    print("درجة المخاطر        :", data["risk_score"])
-    print("مستوى المخاطر       :", data["risk_level"])
+    total_inside += ships
 
-    if "recommendation" in data:
-        print("التوصية             :", data["recommendation"])
 
-    total += data["ships"]
+    score=data.get(
+        "risk_score",
+       0
+    )
 
-    if data["risk_score"] > highest[1]:
-        highest = (name, data["risk_score"])
+
+    if score > highest_score:
+
+        highest_score = score
+        highest = name
+
+
+
+    print(
+        "عدد السفن           :",
+        ships
+    )
+
+
+    print(
+        "ناقلات النفط        :",
+        data.get(
+            "tankers",
+           0
+        )
+    )
+
+
+    print(
+        "السفن المتحركة      :",
+        data.get(
+            "moving",
+           0
+        )
+    )
+
+
+    print(
+        "السفن المتوقفة      :",
+        data.get(
+            "stopped",
+           0
+        )
+    )
+
+
+    print(
+        "كثافة الحركة        :",
+        data.get(
+            "traffic_density",
+           0
+        ),
+        "%"
+    )
+
+
+    print(
+        "نسبة الناقلات       :",
+        data.get(
+            "tanker_ratio",
+           0
+        ),
+        "%"
+    )
+
+
+    print(
+        "درجة المخاطر        :",
+        score
+    )
+
+
+    print(
+        "مستوى المخاطر       :",
+        data.get(
+            "risk_level"
+        )
+    )
+
+
+    print(
+        "الجاهزية            :",
+        data.get(
+            "readiness"
+        )
+    )
+
+
+    print(
+        "التوصية             :",
+        data.get(
+            "recommendation"
+        )
+    )
+
+
+
+# ==========================
+# EXECUTIVE SUMMARY
+# ==========================
 
 
 print()
@@ -80,25 +208,52 @@ print("=" * 60)
 print("الملخص التنفيذي")
 print("=" * 60)
 
-print("إجمالي السفن داخل المضائق :", total)
-print("أعلى منطقة خطورة :", highest[0])
-print("درجة الخطورة :", highest[1])
 
-if highest[1] >= 80:
-    status = "🚨 حرج"
+print(
+    "إجمالي السفن داخل المضائق :",
+    total_inside
+)
 
-elif highest[1] >= 60:
-    status = "🟠 مرتفع"
 
-elif highest[1] >= 30:
-    status = "🟡 متوسط"
+print(
+    "أعلى منطقة خطورة :",
+    highest
+)
+
+
+print(
+    "درجة الخطورة :",
+    highest_score
+)
+
+
+
+if highest_score >=75:
+
+    status="🔴 حرج"
+
+elif highest_score>=50:
+
+    status="🟠 مرتفع"
+
+elif highest_score>=25:
+
+    status="🟡 متوسط"
 
 else:
-    status = "🟢 منخفض"
 
-print("الحالة العامة :", status)
+    status="🟢 منخفض"
 
-print()
+
+
+print(
+    "الحالة العامة :",
+    status
+)
+
+
 print("=" * 60)
-print("اكتمل تشغيل محرك الذكاء البحري")
-print("=" * 60)
+
+print(
+    "اكتمل تشغيل محرك الذكاء البحري"
+)
