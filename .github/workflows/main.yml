@@ -29,14 +29,8 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-
 - name: Run AIS Collector
   env:
     AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
   run: |
     python ais/collector.py
-
-
-- name: Run System
-  run: |
-    python main.py
