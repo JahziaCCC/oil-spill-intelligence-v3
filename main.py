@@ -1,18 +1,22 @@
-==================================================
-Oil Spill Intelligence V3
-AIS INTELLIGENCE ENGINE
-==================================================
+from ais.collector import collect_ais
 
-📡 Starting AIS Collector...
 
-AIS KEY EXISTS: True LENGTH: 40
-✅ AIS Connected
-✅ Subscription sent
-⏳ Waiting AIS messages...
+print("=" * 50)
+print("Oil Spill Intelligence V3")
+print("AIS INTELLIGENCE ENGINE")
+print("=" * 50)
 
-==================================================
-AIS SUMMARY
-==================================================
-🚢 AIS Vessels Received: 114
-✅ AIS CACHE UPDATED
-==================================================
+print("")
+print("AIS Collector Starting...")
+
+vessels = collect_ais()
+
+print("")
+print("=" * 50)
+print("AIS SUMMARY")
+print("=" * 50)
+
+print("AIS Vessels Received:", len(vessels))
+print("AIS CACHE UPDATED")
+
+print("=" * 50)
