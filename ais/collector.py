@@ -50,13 +50,13 @@ def save_cache(vessels):
 
 def collect_ais():
 
-    api_key = os.getenv(
-        "AISSTREAM_API_KEY"
+    print(
+        "📡 AIS Collector Starting..."
     )
 
 
-    print(
-        "📡 AIS Collector Starting..."
+    api_key = os.getenv(
+        "AISSTREAM_API_KEY"
     )
 
 
@@ -78,10 +78,13 @@ def collect_ais():
     )
 
 
+
     vessels = []
 
 
+
     try:
+
 
         ws = websocket.create_connection(
 
@@ -98,9 +101,11 @@ def collect_ais():
 
 
 
-        subscribe = {
+        subscribe_message = {
 
-            "APIKey": api_key,
+            "APIKey":
+
+                api_key,
 
 
             "BoundingBoxes":
@@ -109,9 +114,9 @@ def collect_ais():
 
                 [
 
-                    [25.5,55.0],
+                    [10.0, 30.0],
 
-                    [27.5,57.0]
+                    [35.0, 60.0]
 
                 ]
 
@@ -131,9 +136,11 @@ def collect_ais():
 
 
         ws.send(
+
             json.dumps(
-                subscribe
+                subscribe_message
             )
+
         )
 
 
@@ -142,58 +149,114 @@ def collect_ais():
         )
 
 
+        print(
+            "⏳ Waiting AIS messages (120 seconds)..."
+        )
+
+
+
         start = time.time()
 
-
-        print(
-            "⏳ Waiting AIS messages..."
-        )
 
 
         while time.time() - start < 120:
 
 
-            message = ws.recv()
+            try:
 
 
-            data = json.loads(
-                message
-            )
+                message = ws.recv()
 
 
-            vessel = {
+                data = json.loads(
+                    message
+                )
 
 
-                "mmsi":
-                    data.get("MMSI"),
+                vessel = {
 
 
-                "name":
-                    data.get(
-                        "ShipName",
-                        "UNKNOWN"
-                    ).strip(),
+                    "mmsi":
+
+                        data.get(
+                            "MMSI"
+                        ),
 
 
-                "lat":
-                    data.get("latitude"),
+                    "name":
+
+                        data.get(
+                            "ShipName",
+                            "UNKNOWN"
+                        ).strip(),
 
 
-                "lon":
-                    data.get("longitude")
+                    "lat":
 
-            }
-
-
-            vessels.append(
-                vessel
-            )
+                        data.get(
+                            "latitude"
+                        ),
 
 
-            print(
-                "🚢",
-                vessel
-            )
+                    "lon":
+
+                        data.get(
+                            "longitude"
+                        ),
+
+
+                    "time":
+
+                        data.get(
+                            "time_utc"
+                        )
+
+                }
+
+
+
+                position = data.get(
+                    "PositionReport"
+                )
+
+
+                if position:
+
+
+                    vessel["speed"] = position.get(
+                        "Sog",
+                        0
+                    )
+
+
+                    vessel["heading"] = position.get(
+                        "Cog",
+                        0
+                    )
+
+
+
+                vessels.append(
+                    vessel
+                )
+
+
+                print(
+                    "🚢",
+                    vessel
+                )
+
+
+
+            except Exception as e:
+
+
+                print(
+                    "⚠️ Receive Error:",
+                    e
+                )
+
+                break
 
 
 
@@ -202,6 +265,7 @@ def collect_ais():
 
 
     except Exception as e:
+
 
         print(
             "❌ AIS Error:",
@@ -212,6 +276,12 @@ def collect_ais():
 
     save_cache(
         vessels
+    )
+
+
+    print(
+        "AIS Vessels Received:",
+        len(vessels)
     )
 
 
