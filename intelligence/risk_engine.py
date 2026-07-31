@@ -6,32 +6,26 @@
 CHOKEPOINTS = {
 
     "مضيق هرمز": {
-
         "lat_min": 24.0,
         "lat_max": 28.0,
         "lon_min": 54.0,
         "lon_max": 58.0
-
     },
 
 
     "باب المندب": {
-
         "lat_min": 11.0,
         "lat_max": 14.0,
         "lon_min": 42.0,
         "lon_max": 45.0
-
     },
 
 
     "قناة السويس": {
-
         "lat_min": 29.0,
         "lat_max": 32.5,
         "lon_min": 31.0,
         "lon_max": 33.0
-
     }
 
 }
@@ -55,15 +49,6 @@ def inside_area(lat, lon, area):
 
 
 def calculate_risk(vessels):
-
-
-    print()
-
-    print("=" * 50)
-    print("تشغيل محرك تحليل المخاطر البحرية")
-    print("=" * 50)
-
-    print("السفن الداخلة للتحليل:", len(vessels))
 
 
     report = {}
@@ -215,7 +200,6 @@ def calculate_risk(vessels):
 
         if score >= 70:
 
-
             level = "مرتفع"
 
             recommendation = (
@@ -225,7 +209,6 @@ def calculate_risk(vessels):
 
         elif score >= 40:
 
-
             level = "متوسط"
 
             recommendation = (
@@ -234,7 +217,6 @@ def calculate_risk(vessels):
 
 
         else:
-
 
             level = "منخفض"
 
@@ -247,7 +229,6 @@ def calculate_risk(vessels):
 
 
         report[name] = {
-
 
             "ships": ship_count,
 
@@ -262,7 +243,6 @@ def calculate_risk(vessels):
             "risk_level": level,
 
             "recommendation": recommendation
-
 
         }
 
