@@ -23,7 +23,7 @@ CHOKEPOINTS = {
     "قناة السويس": {
         "lat_min": 29.0,
         "lat_max": 32.8,
-        "lon_min": 29.0
+        "lon_min": 29.0,
         "lon_max": 34.5
     }
 
