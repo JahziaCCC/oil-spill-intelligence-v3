@@ -6,8 +6,6 @@ AIS_CACHE_FILE = "data/ais_cache.json"
 
 
 
-# المناطق الاستراتيجية
-
 CHOKEPOINTS = {
 
     "مضيق هرمز": {
@@ -46,9 +44,7 @@ CHOKEPOINTS = {
 
 def load_vessels():
 
-    if not os.path.exists(
-        AIS_CACHE_FILE
-    ):
+    if not os.path.exists(AIS_CACHE_FILE):
 
         return []
 
@@ -64,10 +60,8 @@ def load_vessels():
 
 
 
-def inside_zone(
-    vessel,
-    zone
-):
+
+def inside_zone(vessel, zone):
 
     lat = vessel.get("lat")
     lon = vessel.get("lon")
@@ -76,7 +70,6 @@ def inside_zone(
     if lat is None or lon is None:
 
         return False
-
 
 
     return (
@@ -97,77 +90,85 @@ def inside_zone(
 
 
 
-def classify_ship(
-    vessel
-):
+def classify_ship(vessel):
 
     name = (
-        vessel
-        .get("name","")
+        vessel.get(
+            "name",
+            ""
+        )
         .upper()
     )
 
 
-    tanker_words = [
+    tanker_keywords = [
 
         "TANK",
         "OIL",
         "VLCC",
-        "CHEM",
+        "ULCC",
+        "LNG",
+        "LPG",
         "GAS",
-        "LNG"
+        "CHEM",
+        "PETRO",
+        "CRUDE",
+        "PRODUCT"
 
     ]
 
 
-    container_words = [
+    container_keywords = [
 
         "MSC",
         "CMA",
         "MAERSK",
-        "EVER"
+        "EVER",
+        "COSCO"
 
     ]
 
 
+
     if any(
-        x in name
-        for x in tanker_words
+        key in name
+        for key in tanker_keywords
     ):
 
         return "ناقلة"
 
 
 
-    if any(
-        x in name
-        for x in container_words
+    elif any(
+        key in name
+        for key in container_keywords
     ):
 
         return "حاويات"
 
 
 
-    return "سفينة عامة"
+    else:
+
+        return "سفينة عامة"
 
 
 
 
 
 
-def calculate_risk(
-    vessels
-):
+def calculate_risk(vessels):
 
 
     report = {}
 
 
 
-    for zone_name, zone in CHOKEPOINTS.items():
+    for name, zone in CHOKEPOINTS.items():
 
 
-        detected = []
+        ships = []
+
 
 
         for vessel in vessels:
@@ -178,35 +179,41 @@ def calculate_risk(
                 zone
             ):
 
-                detected.append(
+                ships.append(
                     vessel
                 )
 
 
 
-        count = len(
-            detected
-        )
-
+        total = len(ships)
 
 
         tankers = 0
-        stopped = 0
+        containers = 0
         moving = 0
+        stopped = 0
 
 
 
-        for ship in detected:
+        for ship in ships:
 
 
-            ship_type = classify_ship(
+            category = classify_ship(
                 ship
             )
 
 
-            if ship_type == "ناقلة":
+
+            if category == "ناقلة":
 
                 tankers += 1
+
+
+
+            elif category == "حاويات":
+
+                containers += 1
+
 
 
 
@@ -227,59 +234,64 @@ def calculate_risk(
 
 
 
-        # حساب مؤشر المخاطر
+        # =====================
+        # حساب المؤشرات
+        # =====================
 
 
-        score = 0
+        traffic_score = 0
+
+
+        if total >= 30:
+
+            traffic_score = 80
+
+        elif total >= 15:
+
+            traffic_score = 60
+
+        elif total >= 5:
+
+            traffic_score = 40
+
+        elif total > 0:
+
+            traffic_score = 20
 
 
 
-        # كثافة الحركة
 
-        if count >= 30:
-
-            score += 40
-
-        elif count >= 10:
-
-            score += 25
-
-        elif count > 0:
-
-            score += 10
+        risk_score = traffic_score
 
 
 
+        # ناقلات الطاقة
 
-        # ناقلات استراتيجية
-
-        score += min(
+        risk_score += min(
             tankers * 5,
-            30
+            20
         )
 
 
 
         # سفن متوقفة
 
-        if stopped >= 5:
-
-            score += 20
-
-        elif stopped > 0:
-
-            score += 10
+        risk_score += min(
+            stopped * 3,
+            15
+        )
 
 
 
-
-        if score >= 70:
+        if risk_score >= 70:
 
             level = "مرتفع"
 
-        elif score >= 40:
+
+        elif risk_score >= 40:
 
             level = "متوسط"
+
 
         else:
 
@@ -289,33 +301,61 @@ def calculate_risk(
 
 
 
-        report[zone_name] = {
+        if risk_score >= 70:
+
+            recommendation = (
+                "رفع مستوى الجاهزية والمراقبة"
+            )
 
 
-            "vessels":
-                count,
+        elif risk_score >= 40:
+
+            recommendation = (
+                "تعزيز المتابعة البحرية"
+            )
 
 
-            "tankers":
+        else:
+
+            recommendation = (
+                "استمرار المراقبة"
+            )
+
+
+
+
+
+        report[name] = {
+
+            "عدد السفن":
+                total,
+
+            "ناقلات محتملة":
                 tankers,
 
+            "سفن حاويات":
+                containers,
 
-            "moving":
+            "سفن متحركة":
                 moving,
 
-
-            "stopped":
+            "سفن متوقفة":
                 stopped,
 
+            "مؤشر الحركة":
+                traffic_score,
 
-            "risk_score":
-                score,
+            "درجة المخاطر":
+                risk_score,
 
+            "مستوى المخاطر":
+                level,
 
-            "risk_level":
-                level
+            "التوصية":
+                recommendation
 
         }
+
 
 
 
@@ -329,7 +369,6 @@ def calculate_risk(
 def analyze_maritime():
 
     vessels = load_vessels()
-
 
     return calculate_risk(
         vessels
