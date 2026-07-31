@@ -175,58 +175,22 @@ def collect_ais():
 
                 vessel = {
 
+    "mmsi":
+        data.get("MMSI"),
 
-                    "mmsi":
+    "name":
+        data.get("ShipName","UNKNOWN").strip(),
 
-                        data.get(
-                            "MMSI"
-                        ),
+    "lat":
+        data.get("latitude"),
 
+    "lon":
+        data.get("longitude"),
 
-                    "name":
+    "time":
+        data.get("time_utc")
 
-                        data.get(
-                            "ShipName",
-                            "UNKNOWN"
-                        ).strip(),
-
-
-                    "lat":
-
-                        data.get(
-                            "latitude"
-                        ),
-
-
-                    "lon":
-
-                        data.get(
-                            "longitude"
-                        ),
-
-
-                    "time":
-
-                        data.get(
-                            "time_utc"
-                        )
-
-                }
-
-
-
-                position = data.get(
-                    "PositionReport"
-                )
-
-
-                if position:
-
-
-                    vessel["speed"] = position.get(
-                        "Sog",
-                        0
-                    )
+}
 
 
                     vessel["heading"] = position.get(
