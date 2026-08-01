@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from ais.collector import collect_ais
 from intelligence.maritime_engine import analyze_maritime
 from intelligence.history_engine import analyze_trend
+from intelligence.early_warning import generate_warning
+
 
 
 def header(title):
@@ -12,6 +14,7 @@ def header(title):
     print("=" * 60)
     print(title)
     print("=" * 60)
+
 
 
 
@@ -36,6 +39,7 @@ print(
 
 
 
+
 # =========================
 # AIS DATA
 # =========================
@@ -44,6 +48,7 @@ print(
 vessels = asyncio.run(
     collect_ais()
 )
+
 
 
 
@@ -74,6 +79,7 @@ print(
 
 
 
+
 # =========================
 # MARITIME ANALYSIS
 # =========================
@@ -85,8 +91,9 @@ risk_report = analyze_maritime(
 
 
 
+
 # =========================
-# TREND ANALYSIS
+# TREND ENGINE V6
 # =========================
 
 
@@ -94,6 +101,25 @@ trend_report = analyze_trend(
     risk_report
 )
 
+
+
+
+# =========================
+# EARLY WARNING V7
+# =========================
+
+
+warning_report = generate_warning(
+    risk_report
+)
+
+
+
+
+
+# =========================
+# RISK REPORT
+# =========================
 
 
 header(
@@ -106,6 +132,7 @@ highest_area = None
 highest_score = -1
 
 total_ships = 0
+
 
 
 
@@ -147,7 +174,6 @@ for area, data in risk_report.items():
 
         highest_score = score
         highest_area = area
-
 
 
 
@@ -276,6 +302,78 @@ for area, data in risk_report.items():
 
 
 # =========================
+# EARLY WARNING
+# =========================
+
+
+header(
+    "نظام الإنذار المبكر البحري"
+)
+
+
+
+for area, warning in warning_report.items():
+
+
+    print()
+
+    print(
+        "📍",
+        area
+    )
+
+
+
+    print(
+        "مستوى الإنذار:",
+        warning.get(
+            "level"
+        )
+    )
+
+
+
+    print(
+        "درجة الخطر:",
+        warning.get(
+            "score"
+        )
+    )
+
+
+
+    if warning.get(
+        "reasons"
+    ):
+
+
+        print(
+            "الأسباب:"
+        )
+
+
+        for reason in warning["reasons"]:
+
+            print(
+                "-",
+                reason
+            )
+
+
+
+    print(
+        "الإجراء:",
+        warning.get(
+            "action"
+        )
+    )
+
+
+
+
+
+
+# =========================
 # THREAT ANALYSIS
 # =========================
 
@@ -374,6 +472,7 @@ for area, data in risk_report.items():
 
 
 
+
 # =========================
 # EXECUTIVE SUMMARY
 # =========================
@@ -406,28 +505,25 @@ print(
 
 
 
+
 if highest_score >= 75:
 
-    status = "🔴 حرج"
-
+    status = "🔴 RED ALERT"
 
 
 elif highest_score >= 50:
 
-    status = "🟠 يحتاج متابعة مكثفة"
-
+    status = "🟠 ORANGE ALERT"
 
 
 elif highest_score >= 25:
 
-    status = "🟡 متوسط"
-
+    status = "🟡 YELLOW ALERT"
 
 
 else:
 
-    status = "🟢 منخفض"
-
+    status = "🟢 NORMAL"
 
 
 
