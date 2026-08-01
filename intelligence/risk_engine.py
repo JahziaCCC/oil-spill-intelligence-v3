@@ -1,7 +1,7 @@
 # intelligence/risk_engine.py
 
-# Strategic Maritime Risk Engine V4
-# Geospatial Chokepoint Intelligence
+# Strategic Maritime Risk Engine V5
+# Chokepoint Early Warning Intelligence
 
 
 CHOKEPOINTS = {
@@ -11,53 +11,47 @@ CHOKEPOINTS = {
 
         "strategic_importance": "Energy HIGH",
 
-        # نطاق تقريبي للمضيق
-        "polygon": [
+        "center": (26.0, 56.5),
 
-            (24.2, 56.0),
-            (24.2, 58.0),
-            (27.0, 58.0),
-            (27.0, 56.0)
+        "lat_range": 4.0,
 
-        ],
+        "lon_range": 4.0,
+
+        "proximity": 3.0,
 
         "weight": 1.5
 
     },
 
 
-
     "باب المندب": {
 
         "strategic_importance": "Trade HIGH",
 
-        "polygon": [
+        "center": (12.8, 43.5),
 
-            (12.0, 42.0),
-            (12.0, 44.8),
-            (13.8, 44.8),
-            (13.8, 42.0)
+        "lat_range": 3.0,
 
-        ],
+        "lon_range": 3.0,
 
-        "weight": 1.3
+        "proximity": 2.5,
+
+        "weight": 1.4
 
     },
-
 
 
     "قناة السويس": {
 
         "strategic_importance": "Supply Chain HIGH",
 
-        "polygon": [
+        "center": (31.0, 32.3),
 
-            (29.0, 32.0),
-            (29.0, 33.2),
-            (32.5, 33.2),
-            (32.5, 31.0)
+        "lat_range": 3.0,
 
-        ],
+        "lon_range": 2.0,
+
+        "proximity": 2.0,
 
         "weight": 1.2
 
@@ -68,38 +62,28 @@ CHOKEPOINTS = {
 
 
 
-def inside_area(lat, lon, area):
 
-    points = area["polygon"]
+def distance_zone(
+        lat,
+        lon,
+        area,
+        factor=1
+):
 
-
-    latitudes = [
-        p[0]
-        for p in points
-    ]
-
-
-    longitudes = [
-        p[1]
-        for p in points
-    ]
+    center_lat, center_lon = area["center"]
 
 
     return (
 
-        min(latitudes)
+        abs(lat - center_lat)
         <=
-        lat
-        <=
-        max(latitudes)
+        area["lat_range"] * factor
 
         and
 
-        min(longitudes)
+        abs(lon - center_lon)
         <=
-        lon
-        <=
-        max(longitudes)
+        area["lon_range"] * factor
 
     )
 
@@ -107,7 +91,8 @@ def inside_area(lat, lon, area):
 
 
 
-def vessel_type(name):
+
+def vessel_class(name):
 
     name = name.upper()
 
@@ -116,11 +101,11 @@ def vessel_type(name):
 
         "TANK",
         "OIL",
-        "GAS",
-        "VLCC",
-        "LNG",
+        "PETRO",
         "CHEM",
-        "PETRO"
+        "LNG",
+        "GAS",
+        "VLCC"
 
     ]
 
@@ -156,6 +141,7 @@ def vessel_type(name):
 
 
 
+
 def calculate_risk(vessels):
 
 
@@ -163,10 +149,12 @@ def calculate_risk(vessels):
 
 
 
-    for area_name, area in CHOKEPOINTS.items():
+    for name, area in CHOKEPOINTS.items():
 
 
-        detected = []
+        inside = []
+
+        nearby = []
 
 
 
@@ -174,6 +162,7 @@ def calculate_risk(vessels):
 
 
             lat = vessel.get("lat")
+
             lon = vessel.get("lon")
 
 
@@ -183,30 +172,55 @@ def calculate_risk(vessels):
 
 
 
-            if inside_area(
+            if distance_zone(
                 lat,
                 lon,
-                area
+                area,
+                1
             ):
 
-                detected.append(
+                inside.append(
+                    vessel
+                )
+
+
+            elif distance_zone(
+                lat,
+                lon,
+                area,
+                area["proximity"]
+            ):
+
+                nearby.append(
                     vessel
                 )
 
 
 
 
-        ships = len(detected)
+
+        ships = len(inside)
+
+        nearby_count = len(nearby)
+
 
 
         tankers = 0
+
         strategic = 0
+
         moving = 0
+
         stopped = 0
 
 
 
-        for ship in detected:
+
+        analyzed = inside + nearby
+
+
+
+        for ship in analyzed:
 
 
             speed = ship.get(
@@ -225,20 +239,18 @@ def calculate_risk(vessels):
 
 
 
-            name = ship.get(
-                "name",
-                ""
-            )
-
-
-            tanker, strategic_ship = vessel_type(
-                name
+            tanker, strategic_ship = vessel_class(
+                ship.get(
+                    "name",
+                    ""
+                )
             )
 
 
             if tanker:
 
                 tankers += 1
+
 
 
             if strategic_ship:
@@ -248,39 +260,29 @@ def calculate_risk(vessels):
 
 
 
-        traffic = 0
 
-        if ships:
 
-            traffic = round(
-                (moving / ships) * 100,
+        traffic_density = 0
+
+
+        if analyzed:
+
+            traffic_density = round(
+                (moving / len(analyzed))
+                *
+                100,
                 1
             )
 
 
 
-        tanker_ratio = 0
-
-        if ships:
-
-            tanker_ratio = round(
-                (tankers / ships) * 100,
-                1
-            )
-
-
-
-
-        # =========================
-        # Risk Score V4
-        # =========================
 
 
         score = 0
 
 
 
-        # كثافة السفن
+        # السفن داخل المنطقة
 
         if ships >= 50:
 
@@ -296,7 +298,26 @@ def calculate_risk(vessels):
 
         elif ships > 0:
 
+            score += 10
+
+
+
+
+
+        # السفن القريبة (إنذار مبكر)
+
+        if nearby_count >= 20:
+
+            score += 20
+
+        elif nearby_count >= 10:
+
+            score += 10
+
+        elif nearby_count > 0:
+
             score += 5
+
 
 
 
@@ -310,12 +331,17 @@ def calculate_risk(vessels):
 
 
 
+
+
         # سفن استراتيجية
 
         score += min(
             strategic * 8,
-            20
+            25
         )
+
+
+
 
 
 
@@ -331,11 +357,11 @@ def calculate_risk(vessels):
 
 
 
-        # أهمية المضيق
+
+
 
         score = int(
-            score
-            *
+            score *
             area["weight"]
         )
 
@@ -344,6 +370,7 @@ def calculate_risk(vessels):
         if score > 100:
 
             score = 100
+
 
 
 
@@ -385,7 +412,7 @@ def calculate_risk(vessels):
 
 
 
-        report[area_name] = {
+        report[name] = {
 
 
             "strategic_importance":
@@ -394,6 +421,10 @@ def calculate_risk(vessels):
 
             "ships":
                 ships,
+
+
+            "nearby_ships":
+                nearby_count,
 
 
             "tankers":
@@ -413,11 +444,7 @@ def calculate_risk(vessels):
 
 
             "traffic_density":
-                traffic,
-
-
-            "tanker_ratio":
-                tanker_ratio,
+                traffic_density,
 
 
             "risk_score":
@@ -435,8 +462,9 @@ def calculate_risk(vessels):
             "recommendation":
                 recommendation
 
-
         }
+
+
 
 
 
