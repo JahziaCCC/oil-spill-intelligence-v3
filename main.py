@@ -3,9 +3,7 @@ from datetime import datetime, timezone
 
 from ais.collector import collect_ais
 from intelligence.maritime_engine import analyze_maritime
-from intelligence.trend_engine import analyze_trend
-from intelligence.history_engine import save_history
-
+from intelligence.history_engine import analyze_trend
 
 
 def header(title):
@@ -17,13 +15,10 @@ def header(title):
 
 
 
-# =========================
-# HEADER
-# =========================
-
 header(
     "Oil Spill Intelligence V3\nStrategic Maritime Intelligence Engine"
 )
+
 
 
 time_now = datetime.now(
@@ -31,6 +26,7 @@ time_now = datetime.now(
 ).strftime(
     "%Y-%m-%d %H:%M UTC"
 )
+
 
 
 print(
@@ -41,8 +37,9 @@ print(
 
 
 # =========================
-# AIS COLLECTION
+# AIS DATA
 # =========================
+
 
 vessels = asyncio.run(
     collect_ais()
@@ -62,10 +59,12 @@ print(
 )
 
 
+
 print(
     "حالة النظام:",
     "ONLINE"
 )
+
 
 
 print(
@@ -82,17 +81,6 @@ print(
 
 risk_report = analyze_maritime(
     vessels
-)
-
-
-
-# =========================
-# SAVE HISTORY
-# =========================
-
-
-save_history(
-    risk_report
 )
 
 
@@ -123,6 +111,7 @@ total_ships = 0
 
 for area, data in risk_report.items():
 
+
     print()
 
     print(
@@ -135,16 +124,19 @@ for area, data in risk_report.items():
     )
 
 
+
     ships = data.get(
         "ships",
         0
     )
 
 
+
     score = data.get(
         "risk_score",
         0
     )
+
 
 
     total_ships += ships
@@ -158,6 +150,8 @@ for area, data in risk_report.items():
 
 
 
+
+
     print(
         "الأهمية الاستراتيجية :",
         data.get(
@@ -167,10 +161,22 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "عدد السفن:",
         ships
     )
+
+
+
+    print(
+        "السفن القريبة:",
+        data.get(
+            "nearby_ships",
+            0
+        )
+    )
+
 
 
     print(
@@ -182,6 +188,7 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "السفن الاستراتيجية:",
         data.get(
@@ -189,6 +196,7 @@ for area, data in risk_report.items():
             0
         )
     )
+
 
 
     print(
@@ -200,6 +208,7 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "السفن المتوقفة:",
         data.get(
@@ -209,19 +218,22 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "درجة المخاطر:",
         score
     )
 
 
+
     print(
         "اتجاه المخاطر:",
         trend_report.get(area, {}).get(
             "trend",
-            "مستقر"
+            "غير متوفر"
         )
     )
+
 
 
     print(
@@ -233,12 +245,14 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "مستوى المخاطر:",
         data.get(
             "risk_level"
         )
     )
+
 
 
     print(
@@ -249,12 +263,15 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "التوصية:",
         data.get(
             "recommendation"
         )
     )
+
+
 
 
 
@@ -271,7 +288,9 @@ header(
 
 for area, data in risk_report.items():
 
+
     threats = []
+
 
 
     if data.get(
@@ -318,6 +337,7 @@ for area, data in risk_report.items():
 
     if threats:
 
+
         print(
             "مستوى التأثير: HIGH"
         )
@@ -331,6 +351,7 @@ for area, data in risk_report.items():
             )
 
 
+
         print(
             "التوصية: رفع مستوى الجاهزية وتكثيف المتابعة"
         )
@@ -338,6 +359,7 @@ for area, data in risk_report.items():
 
 
     else:
+
 
         print(
             "مستوى التأثير: LOW"
@@ -347,6 +369,8 @@ for area, data in risk_report.items():
         print(
             "- لا توجد تهديدات مكتشفة"
         )
+
+
 
 
 
@@ -387,9 +411,11 @@ if highest_score >= 75:
     status = "🔴 حرج"
 
 
+
 elif highest_score >= 50:
 
     status = "🟠 يحتاج متابعة مكثفة"
+
 
 
 elif highest_score >= 25:
@@ -397,9 +423,12 @@ elif highest_score >= 25:
     status = "🟡 متوسط"
 
 
+
 else:
 
     status = "🟢 منخفض"
+
+
 
 
 
@@ -411,6 +440,7 @@ print(
 
 
 print("=" * 60)
+
 
 
 print(
