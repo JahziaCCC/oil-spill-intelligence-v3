@@ -2,70 +2,80 @@ import asyncio
 from datetime import datetime, timezone
 
 from ais.collector import collect_ais
-
 from intelligence.maritime_engine import analyze_maritime
-
 from intelligence.trend_engine import analyze_trend
-
-from intelligence.history_db import (
-    create_database,
-    save_report
-)
-
+from intelligence.history_db import create_database, save_report
 
 
 def header(title):
-
     print()
-
     print("=" * 60)
-
     print(title)
-
     print("=" * 60)
 
 
+def get_alert(score):
+
+    if score >= 70:
+        return (
+            "🔴 RED ALERT",
+            "رفع مستوى الجاهزية التشغيلية الفورية"
+        )
+
+    elif score >= 30:
+        return (
+            "🟡 YELLOW ALERT",
+            "مراقبة مستمرة"
+        )
+
+    else:
+        return (
+            "🟢 NORMAL",
+            "استمرار المراقبة"
+        )
 
 
+# ==================================================
+# START
+# ==================================================
 
 header(
     "Oil Spill Intelligence V3\nStrategic Maritime Intelligence Engine"
 )
 
 
-
 time_now = datetime.now(
     timezone.utc
-).strftime(
-    "%Y-%m-%d %H:%M UTC"
-)
+).strftime("%Y-%m-%d %H:%M UTC")
+
+
+print("وقت التشغيل :", time_now)
 
 
 
-print(
-    "وقت التشغيل :",
-    time_now
-)
+# ==================================================
+# AIS
+# ==================================================
+
+header("تشغيل AIS Collector")
+
+
+try:
+
+    vessels = asyncio.run(
+        collect_ais()
+    )
+
+
+except Exception as e:
+
+    print("❌ AIS ERROR:", e)
+
+    vessels = []
 
 
 
-
-# =========================
-# AIS DATA
-# =========================
-
-
-vessels = asyncio.run(
-    collect_ais()
-)
-
-
-
-
-header(
-    "ملخص نظام AIS"
-)
-
+header("ملخص نظام AIS")
 
 
 print(
@@ -73,14 +83,10 @@ print(
     len(vessels)
 )
 
-
-
 print(
     "حالة النظام:",
-    "ONLINE"
+    "ONLINE" if vessels else "OFFLINE"
 )
-
-
 
 print(
     "مصدر البيانات:",
@@ -89,110 +95,95 @@ print(
 
 
 
-
-# =========================
-# RISK ANALYSIS
-# =========================
-
-
+# ==================================================
+# RISK ENGINE
+# ==================================================
 
 header(
     "تشغيل محرك تحليل المخاطر البحرية"
 )
 
 
+try:
 
-risk_report = analyze_maritime(
-    vessels
-)
+    risk_report = analyze_maritime(
+        vessels
+    )
 
-
-
-print(
-    "تم الانتهاء من تحليل المخاطر."
-)
-
+    print(
+        "✅ تم الانتهاء من تحليل المخاطر"
+    )
 
 
+except Exception as e:
 
-# =========================
-# HISTORICAL DATABASE
-# =========================
+    print(
+        "❌ Risk Engine Error:",
+        e
+    )
 
-
-
-create_database()
+    risk_report = {}
 
 
 
-save_report(
-    risk_report
-)
+# ==================================================
+# HISTORY
+# ==================================================
+
+try:
+
+    create_database()
+
+    save_report(
+        risk_report
+    )
+
+    print(
+        "✅ Historical Risk Database Updated"
+    )
+
+
+except Exception as e:
+
+    print(
+        "⚠️ History Database Error:",
+        e
+    )
 
 
 
-print(
-    "✅ Historical Risk Database Updated"
-)
+# ==================================================
+# TREND
+# ==================================================
+
+try:
+
+    trend_report = analyze_trend(
+        risk_report
+    )
+
+except:
+
+    trend_report = {}
 
 
 
-
-# =========================
-# TREND ANALYSIS
-# =========================
-
-
-
-trend_report = analyze_trend(
-    risk_report
-)
-
-
-
-
-# =========================
-# MARITIME REPORT
-# =========================
-
-
+# ==================================================
+# REPORT
+# ==================================================
 
 header(
     "تقرير المخاطر البحرية"
 )
 
 
-
 highest_area = None
-
-highest_score = -1
-
+highest_score = 0
 total_ships = 0
 
 
 
-
-for area,data in risk_report.items():
-
-
-    print()
-
-    print(
-        "📍",
-        area
-    )
-
-
-    print(
-        "-" * 40
-    )
-
-
-
-    ships = data.get(
-        "ships",
-        0
-    )
+for area, data in risk_report.items():
 
 
     score = data.get(
@@ -201,37 +192,38 @@ for area,data in risk_report.items():
     )
 
 
+    ships = data.get(
+        "ships",
+        0
+    )
+
 
     total_ships += ships
-
 
 
     if score > highest_score:
 
         highest_score = score
-
         highest_area = area
 
 
 
+    print()
+    print("📍", area)
+    print("-" * 40)
 
 
     print(
-        "الأهمية الاستراتيجية :",
+        "الأهمية:",
         data.get(
-            "strategic_importance",
-            "غير محدد"
+            "strategic_importance"
         )
     )
-
-
 
     print(
         "عدد السفن:",
         ships
     )
-
-
 
     print(
         "السفن القريبة:",
@@ -241,8 +233,6 @@ for area,data in risk_report.items():
         )
     )
 
-
-
     print(
         "ناقلات النفط:",
         data.get(
@@ -250,8 +240,6 @@ for area,data in risk_report.items():
             0
         )
     )
-
-
 
     print(
         "السفن الاستراتيجية:",
@@ -261,8 +249,6 @@ for area,data in risk_report.items():
         )
     )
 
-
-
     print(
         "السفن المتحركة:",
         data.get(
@@ -270,8 +256,6 @@ for area,data in risk_report.items():
             0
         )
     )
-
-
 
     print(
         "السفن المتوقفة:",
@@ -282,48 +266,30 @@ for area,data in risk_report.items():
     )
 
 
-
     print(
         "درجة المخاطر:",
         score
     )
 
 
-
     print(
-        "اتجاه المخاطر:",
+        "الاتجاه:",
         trend_report.get(
             area,
             {}
         ).get(
             "trend",
-            "غير متوفر"
+            "مستقر"
         )
     )
 
 
-
     print(
-        "تغير الدرجة:",
-        trend_report.get(
-            area,
-            {}
-        ).get(
-            "difference",
-            0
-        )
-    )
-
-
-
-    print(
-        "مستوى المخاطر:",
+        "مستوى الخطر:",
         data.get(
             "risk_level"
         )
     )
-
-
 
     print(
         "الجاهزية:",
@@ -331,8 +297,6 @@ for area,data in risk_report.items():
             "readiness"
         )
     )
-
-
 
     print(
         "التوصية:",
@@ -343,24 +307,16 @@ for area,data in risk_report.items():
 
 
 
-
-
-
-# =========================
-# EARLY WARNING SYSTEM
-# =========================
-
-
+# ==================================================
+# EARLY WARNING
+# ==================================================
 
 header(
     "نظام الإنذار المبكر البحري"
 )
 
 
-
-
 for area,data in risk_report.items():
-
 
     score = data.get(
         "risk_score",
@@ -368,41 +324,16 @@ for area,data in risk_report.items():
     )
 
 
-    print()
+    alert, action = get_alert(
+        score
+    )
 
+
+    print()
     print(
         "📍",
         area
     )
-
-
-
-    if score >= 70:
-
-        alert = "🔴 RED ALERT"
-
-        action = (
-            "رفع مستوى الجاهزية التشغيلية الفورية"
-        )
-
-
-    elif score >= 30:
-
-        alert = "🟡 YELLOW ALERT"
-
-        action = (
-            "مراقبة مستمرة"
-        )
-
-
-    else:
-
-        alert = "🟢 NORMAL"
-
-        action = (
-            "استمرار المراقبة"
-        )
-
 
 
     print(
@@ -417,44 +348,26 @@ for area,data in risk_report.items():
     )
 
 
-
     if score >= 30:
-
 
         print(
             "الأسباب:"
         )
 
-
-        if data.get(
-            "ships",
-            0
-        ) >= 20:
-
+        if data.get("ships",0) >= 20:
             print(
                 "- كثافة سفن عالية"
             )
 
-
-        if data.get(
-            "tankers",
-            0
-        ) > 0:
-
+        if data.get("tankers",0):
             print(
                 "- وجود ناقلات نفط"
             )
 
-
-        if data.get(
-            "strategic",
-            0
-        ) > 0:
-
+        if data.get("strategic",0):
             print(
                 "- وجود سفن استراتيجية"
             )
-
 
 
     print(
@@ -464,18 +377,13 @@ for area,data in risk_report.items():
 
 
 
-
-
-# =========================
-# EXECUTIVE SUMMARY
-# =========================
-
-
+# ==================================================
+# EXECUTIVE
+# ==================================================
 
 header(
     "الملخص التنفيذي"
 )
-
 
 
 print(
@@ -484,12 +392,10 @@ print(
 )
 
 
-
 print(
     "أعلى منطقة خطورة:",
     highest_area
 )
-
 
 
 print(
@@ -499,35 +405,18 @@ print(
 
 
 
-if highest_score >= 70:
-
-    status = "🔴 RED ALERT"
-
-
-elif highest_score >= 30:
-
-    status = "🟡 YELLOW ALERT"
-
-
-else:
-
-    status = "🟢 NORMAL"
-
-
+final_alert, _ = get_alert(
+    highest_score
+)
 
 
 print(
     "الحالة العامة:",
-    status
+    final_alert
 )
 
 
-
-print(
-    "=" * 60
-)
-
-
+print("=" * 60)
 
 print(
     "اكتمل تشغيل محرك الذكاء البحري"
