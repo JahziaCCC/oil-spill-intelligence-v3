@@ -1,96 +1,159 @@
+# intelligence/trend_engine.py
+
+# محرك اتجاه المخاطر البحرية
+# Maritime Risk Trend Engine
+
+
 import json
 import os
 
 
-TREND_FILE = "trend_history.json"
+HISTORY_FILE = "risk_history.json"
 
 
-def load_previous():
 
-    if not os.path.exists(TREND_FILE):
+def load_history():
+
+    if not os.path.exists(HISTORY_FILE):
+
         return {}
 
     try:
 
         with open(
-            TREND_FILE,
+            HISTORY_FILE,
             "r",
             encoding="utf-8"
-        ) as f:
+        ) as file:
 
-            return json.load(f)
+            return json.load(file)
 
-    except Exception:
+
+    except:
 
         return {}
 
 
-def save_current(report):
+
+
+
+def save_history(data):
 
     with open(
-        TREND_FILE,
+        HISTORY_FILE,
         "w",
         encoding="utf-8"
-    ) as f:
+    ) as file:
 
         json.dump(
-            report,
-            f,
+            data,
+            file,
             ensure_ascii=False,
             indent=4
         )
 
 
-def analyze_trend(current):
 
-    previous = load_previous()
 
-    result = {}
 
-    for area, data in current.items():
 
-        old = previous.get(area, {})
+def analyze_trend(report):
 
-        old_score = old.get(
+
+    previous = load_history()
+
+
+    trend_report = {}
+
+    current_snapshot = {}
+
+
+
+
+    for area,data in report.items():
+
+
+        current_score = data.get(
             "risk_score",
             0
         )
 
-        new_score = data.get(
-            "risk_score",
+
+        old_score = previous.get(
+            area,
             0
         )
 
-        diff = new_score - old_score
 
-        if diff > 10:
+
+        difference = (
+            current_score -
+            old_score
+        )
+
+
+
+
+        if difference >= 20:
 
             trend = "🔺 تصاعد سريع"
 
-        elif diff > 0:
 
-            trend = "🟡 تصاعد"
+        elif difference > 0:
 
-        elif diff < -10:
+            trend = "🔸 ارتفاع"
 
-            trend = "🔻 انخفاض سريع"
 
-        elif diff < 0:
+        elif difference < 0:
 
-            trend = "🟢 انخفاض"
+            trend = "🔻 انخفاض"
+
 
         else:
 
             trend = "⚪ مستقر"
 
-        result[area] = {
 
-            "trend": trend,
 
-            "difference": diff
+
+
+        trend_report[area] = {
+
+
+            "trend":
+
+                trend,
+
+
+            "difference":
+
+                difference,
+
+
+            "previous_score":
+
+                old_score,
+
+
+            "current_score":
+
+                current_score
 
         }
 
-    save_current(current)
 
-    return result
+
+
+        current_snapshot[area] = current_score
+
+
+
+
+
+    save_history(
+        current_snapshot
+    )
+
+
+
+    return trend_report
