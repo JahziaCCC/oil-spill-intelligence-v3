@@ -1,143 +1,64 @@
 # intelligence/risk_engine.py
 
-# Strategic Maritime Risk Engine V5
-# Chokepoint Early Warning Intelligence
+# Strategic Maritime Risk Engine V3.1
+# Baseline + Confidence + Early Warning
 
 
 CHOKEPOINTS = {
 
-
     "مضيق هرمز": {
+
+        "lat_min": 24.0,
+        "lat_max": 28.0,
+        "lon_min": 54.0,
+        "lon_max": 58.0,
 
         "strategic_importance": "Energy HIGH",
 
-        "center": (26.0, 56.5),
-
-        "lat_range": 4.0,
-
-        "lon_range": 4.0,
-
-        "proximity": 3.0,
-
-        "weight": 1.5
-
+        "baseline_ships": 15
     },
 
 
     "باب المندب": {
 
+        "lat_min": 11.0,
+        "lat_max": 14.0,
+        "lon_min": 42.0,
+        "lon_max": 45.0,
+
         "strategic_importance": "Trade HIGH",
 
-        "center": (12.8, 43.5),
-
-        "lat_range": 3.0,
-
-        "lon_range": 3.0,
-
-        "proximity": 2.5,
-
-        "weight": 1.4
-
+        "baseline_ships": 15
     },
 
 
     "قناة السويس": {
 
+        "lat_min": 29.0,
+        "lat_max": 32.5,
+        "lon_min": 31.0,
+        "lon_max": 33.0,
+
         "strategic_importance": "Supply Chain HIGH",
 
-        "center": (31.0, 32.3),
-
-        "lat_range": 3.0,
-
-        "lon_range": 2.0,
-
-        "proximity": 2.0,
-
-        "weight": 1.2
-
+        "baseline_ships": 22
     }
 
 }
 
 
 
-
-
-def distance_zone(
-        lat,
-        lon,
-        area,
-        factor=1
-):
-
-    center_lat, center_lon = area["center"]
-
+def inside_area(lat, lon, area):
 
     return (
 
-        abs(lat - center_lat)
-        <=
-        area["lat_range"] * factor
+        area["lat_min"] <= lat <= area["lat_max"]
 
         and
 
-        abs(lon - center_lon)
-        <=
-        area["lon_range"] * factor
+        area["lon_min"] <= lon <= area["lon_max"]
 
     )
-
-
-
-
-
-
-def vessel_class(name):
-
-    name = name.upper()
-
-
-    tanker_words = [
-
-        "TANK",
-        "OIL",
-        "PETRO",
-        "CHEM",
-        "LNG",
-        "GAS",
-        "VLCC"
-
-    ]
-
-
-    strategic_words = [
-
-        "MSC",
-        "MAERSK",
-        "CMA",
-        "COSCO",
-        "EVER",
-        "ONE",
-        "HAPAG"
-
-    ]
-
-
-    tanker = any(
-        x in name
-        for x in tanker_words
-    )
-
-
-    strategic = any(
-        x in name
-        for x in strategic_words
-    )
-
-
-    return tanker, strategic
-
-
 
 
 
@@ -152,75 +73,42 @@ def calculate_risk(vessels):
     for name, area in CHOKEPOINTS.items():
 
 
-        inside = []
-
-        nearby = []
-
+        detected = []
 
 
         for vessel in vessels:
 
 
             lat = vessel.get("lat")
-
             lon = vessel.get("lon")
 
 
             if lat is None or lon is None:
-
                 continue
 
 
 
-            if distance_zone(
+            if inside_area(
                 lat,
                 lon,
-                area,
-                1
+                area
             ):
 
-                inside.append(
-                    vessel
-                )
-
-
-            elif distance_zone(
-                lat,
-                lon,
-                area,
-                area["proximity"]
-            ):
-
-                nearby.append(
-                    vessel
-                )
+                detected.append(vessel)
 
 
 
-
-
-        ships = len(inside)
-
-        nearby_count = len(nearby)
-
+        ship_count = len(detected)
 
 
         tankers = 0
-
         strategic = 0
-
         moving = 0
-
         stopped = 0
 
 
 
-
-        analyzed = inside + nearby
-
-
-
-        for ship in analyzed:
+        for ship in detected:
 
 
             speed = ship.get(
@@ -230,106 +118,140 @@ def calculate_risk(vessels):
 
 
             if speed > 1:
-
                 moving += 1
 
             else:
-
                 stopped += 1
 
 
 
-            tanker, strategic_ship = vessel_class(
-                ship.get(
-                    "name",
-                    ""
-                )
-            )
+            ship_name = ship.get(
+                "name",
+                ""
+            ).upper()
 
 
-            if tanker:
+
+            tanker_keywords = [
+
+                "TANK",
+                "OIL",
+                "GAS",
+                "VLCC",
+                "CHEM",
+                "PETRO",
+                "LNG"
+
+            ]
+
+
+
+            strategic_keywords = [
+
+                "MSC",
+                "MAERSK",
+                "CMA",
+                "EVER",
+                "COSCO",
+                "ONE"
+
+            ]
+
+
+
+            if any(
+                x in ship_name
+                for x in tanker_keywords
+            ):
 
                 tankers += 1
 
 
 
-            if strategic_ship:
+            if any(
+                x in ship_name
+                for x in strategic_keywords
+            ):
 
                 strategic += 1
 
 
 
 
+        # ======================
+        # المؤشرات
+        # ======================
 
 
         traffic_density = 0
 
-
-        if analyzed:
+        if ship_count:
 
             traffic_density = round(
-                (moving / len(analyzed))
-                *
-                100,
+                (moving / ship_count) * 100,
                 1
             )
 
 
 
+        stopped_ratio = 0
+
+        if ship_count:
+
+            stopped_ratio = round(
+                (stopped / ship_count) * 100,
+                1
+            )
+
+
+
+        baseline = area["baseline_ships"]
+
+
+        deviation = 0
+
+        if baseline:
+
+            deviation = round(
+                ((ship_count - baseline)
+                / baseline) * 100,
+                1
+            )
+
+
+
+        # ======================
+        # Risk Score
+        # ======================
 
 
         score = 0
 
 
 
-        # السفن داخل المنطقة
+        # كثافة السفن
 
-        if ships >= 50:
+        if ship_count >= baseline * 2:
 
-            score += 35
+            score += 40
 
-        elif ships >= 20:
+        elif ship_count >= baseline:
 
             score += 25
 
-        elif ships >= 10:
-
-            score += 15
-
-        elif ships > 0:
+        elif ship_count > 0:
 
             score += 10
 
 
 
 
-
-        # السفن القريبة (إنذار مبكر)
-
-        if nearby_count >= 20:
-
-            score += 20
-
-        elif nearby_count >= 10:
-
-            score += 10
-
-        elif nearby_count > 0:
-
-            score += 5
-
-
-
-
-
-        # ناقلات النفط
+        # ناقلات
 
         score += min(
-            tankers * 12,
-            30
+            tankers * 10,
+            20
         )
-
-
 
 
 
@@ -337,77 +259,120 @@ def calculate_risk(vessels):
 
         score += min(
             strategic * 8,
-            25
+            20
+        )
+
+
+
+        # توقف ملاحي
+
+        if stopped_ratio >= 70:
+
+            score += 20
+
+        elif stopped_ratio >= 50:
+
+            score += 10
+
+
+
+
+        score = min(
+            score,
+            100
+        )
+
+
+
+        # ======================
+        # Confidence
+        # ======================
+
+
+        confidence = 50
+
+
+        if ship_count > 0:
+
+            confidence += 15
+
+
+        if tankers > 0:
+
+            confidence += 10
+
+
+        if strategic > 0:
+
+            confidence += 10
+
+
+        if stopped_ratio > 50:
+
+            confidence += 10
+
+
+
+        confidence = min(
+            confidence,
+            95
         )
 
 
 
 
+        # ======================
+        # Alert
+        # ======================
 
 
-        # الحركة
-
-        if moving >= 20:
-
-            score += 15
-
-        elif moving >= 10:
-
-            score += 8
+        reasons = []
 
 
+        if ship_count >= baseline:
 
-
-
-
-        score = int(
-            score *
-            area["weight"]
-        )
-
-
-
-        if score > 100:
-
-            score = 100
-
-
-
-
-
-
-        if score >= 75:
-
-            level = "مرتفع"
-
-            readiness = "حرج"
-
-            recommendation = (
-                "رفع مستوى الجاهزية والمراقبة"
+            reasons.append(
+                "كثافة سفن أعلى من المعدل"
             )
 
+
+        if stopped_ratio >= 50:
+
+            reasons.append(
+                "ارتفاع نسبة السفن المتوقفة"
+            )
+
+
+        if tankers:
+
+            reasons.append(
+                "وجود ناقلات نفط"
+            )
+
+
+        if strategic:
+
+            reasons.append(
+                "وجود سفن استراتيجية"
+            )
+
+
+
+
+        if score >= 80:
+
+            alert = "🔴 RED ALERT"
+            level = "مرتفع"
 
         elif score >= 50:
 
+            alert = "🟠 WARNING"
             level = "متوسط"
-
-            readiness = "مرتفع"
-
-            recommendation = (
-                "زيادة المتابعة والتحليل"
-            )
-
 
         else:
 
+            alert = "🟢 NORMAL"
             level = "منخفض"
-
-            readiness = "منخفض"
-
-            recommendation = (
-                "استمرار المراقبة"
-            )
-
 
 
 
@@ -420,11 +385,15 @@ def calculate_risk(vessels):
 
 
             "ships":
-                ships,
+                ship_count,
 
 
-            "nearby_ships":
-                nearby_count,
+            "baseline":
+                baseline,
+
+
+            "deviation":
+                deviation,
 
 
             "tankers":
@@ -443,6 +412,10 @@ def calculate_risk(vessels):
                 stopped,
 
 
+            "stopped_ratio":
+                stopped_ratio,
+
+
             "traffic_density":
                 traffic_density,
 
@@ -451,20 +424,43 @@ def calculate_risk(vessels):
                 score,
 
 
+            "confidence":
+                confidence,
+
+
+            "alert":
+                alert,
+
+
+            "alert_reasons":
+                reasons,
+
+
             "risk_level":
                 level,
 
 
             "readiness":
-                readiness,
+                "مرتفع"
+                if score >=50
+                else "منخفض",
 
 
             "recommendation":
-                recommendation
+
+                "رفع مستوى الجاهزية التشغيلية"
+                if score >=80
+
+                else
+
+                "زيادة المتابعة والتحليل"
+                if score >=50
+
+                else
+
+                "استمرار المراقبة"
 
         }
-
-
 
 
 
