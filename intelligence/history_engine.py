@@ -1,3 +1,7 @@
+# intelligence/history_engine.py
+
+# Strategic Maritime Historical Trend Engine V6
+
 import json
 import os
 from datetime import datetime, timezone
@@ -11,55 +15,79 @@ def ensure_storage():
 
     folder = os.path.dirname(HISTORY_FILE)
 
-    if not os.path.exists(folder):
+    if folder and not os.path.exists(folder):
 
         os.makedirs(folder)
 
 
 
-def save_history(report):
+
+
+def load_history():
 
     ensure_storage()
 
 
-    timestamp = datetime.now(
-        timezone.utc
-    ).strftime(
-        "%Y-%m-%d %H:%M UTC"
-    )
+    if not os.path.exists(HISTORY_FILE):
+
+        return []
+
+
+    try:
+
+        with open(
+            HISTORY_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            return json.load(file)
+
+
+    except:
+
+        return []
+
+
+
+
+
+
+def save_history(report):
+
+
+    ensure_storage()
+
+
+    history = load_history()
+
 
 
     record = {
 
-        "timestamp": timestamp,
 
-        "areas": report
+        "time":
+            datetime.now(
+                timezone.utc
+            ).strftime(
+                "%Y-%m-%d %H:%M UTC"
+            ),
+
+
+        "areas":
+            report
 
     }
 
 
-    history = []
-
-
-    if os.path.exists(HISTORY_FILE):
-
-        try:
-
-            with open(
-                HISTORY_FILE,
-                "r",
-                encoding="utf-8"
-            ) as file:
-
-                history = json.load(file)
-
-        except:
-
-            history = []
-
-
 
     history.append(record)
+
+
+
+    # الاحتفاظ بآخر 100 قراءة
+
+    history = history[-100:]
 
 
 
@@ -68,6 +96,7 @@ def save_history(report):
         "w",
         encoding="utf-8"
     ) as file:
+
 
         json.dump(
             history,
@@ -78,17 +107,113 @@ def save_history(report):
 
 
 
-def load_history():
-
-    if not os.path.exists(HISTORY_FILE):
-
-        return []
+    return record
 
 
-    with open(
-        HISTORY_FILE,
-        "r",
-        encoding="utf-8"
-    ) as file:
 
-        return json.load(file)
+
+
+
+def analyze_trend(report):
+
+
+    history = load_history()
+
+
+
+    trend = {}
+
+
+
+    for area,data in report.items():
+
+
+        current = data.get(
+            "risk_score",
+            0
+        )
+
+
+        previous = current
+
+
+
+        if history:
+
+
+            try:
+
+                previous = history[-1]["areas"][area].get(
+                    "risk_score",
+                    current
+                )
+
+            except:
+
+                previous = current
+
+
+
+
+
+        difference = current - previous
+
+
+
+
+
+        if difference >= 20:
+
+            direction = "🔺 تصاعد سريع"
+
+
+        elif difference > 0:
+
+            direction = "↗️ ارتفاع"
+
+
+        elif difference < 0:
+
+            direction = "↘️ انخفاض"
+
+
+        else:
+
+            direction = "⚪ مستقر"
+
+
+
+
+
+        trend[area] = {
+
+
+            "current":
+
+                current,
+
+
+            "previous":
+
+                previous,
+
+
+            "difference":
+
+                difference,
+
+
+            "trend":
+
+                direction
+
+        }
+
+
+
+
+    save_history(report)
+
+
+
+    return trend
