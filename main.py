@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from ais.collector import collect_ais
 from intelligence.maritime_engine import analyze_maritime
+from intelligence.trend_engine import analyze_trend
 
 
 def header(title):
@@ -45,17 +46,17 @@ header("ملخص نظام AIS")
 
 
 print(
-    "عدد السفن المرصودة:",
+‎    "عدد السفن المرصودة:",
     len(vessels)
 )
 
 print(
-    "حالة النظام:",
+‎    "حالة النظام:",
     "ONLINE"
 )
 
 print(
-    "مصدر البيانات:",
+‎    "مصدر البيانات:",
     "AIS REAL TIME"
 )
 
@@ -71,9 +72,15 @@ risk_report = analyze_maritime(
 )
 
 
+‎# تحليل اتجاه المخاطر
+trend_report = analyze_trend(
+    risk_report
+)
+
+
 
 header(
-    "تقرير المخاطر البحرية"
+‎    "تقرير المخاطر البحرية"
 )
 
 
@@ -120,22 +127,22 @@ for area,data in risk_report.items():
 
 
     print(
-        "الأهمية الاستراتيجية :",
+‎        "الأهمية الاستراتيجية :",
         data.get(
             "strategic_importance",
-            "غير محدد"
+‎            "غير محدد"
         )
     )
 
 
     print(
-        "عدد السفن:",
+‎        "عدد السفن:",
         ships
     )
 
 
     print(
-        "ناقلات النفط:",
+‎        "ناقلات النفط:",
         data.get(
             "tankers",
             0
@@ -144,7 +151,7 @@ for area,data in risk_report.items():
 
 
     print(
-        "السفن الاستراتيجية:",
+‎        "السفن الاستراتيجية:",
         data.get(
             "strategic",
             0
@@ -153,7 +160,7 @@ for area,data in risk_report.items():
 
 
     print(
-        "السفن المتحركة:",
+‎        "السفن المتحركة:",
         data.get(
             "moving",
             0
@@ -162,7 +169,7 @@ for area,data in risk_report.items():
 
 
     print(
-        "السفن المتوقفة:",
+‎        "السفن المتوقفة:",
         data.get(
             "stopped",
             0
@@ -171,13 +178,31 @@ for area,data in risk_report.items():
 
 
     print(
-        "درجة المخاطر:",
+‎        "درجة المخاطر:",
         score
     )
 
 
     print(
-        "مستوى المخاطر:",
+‎        "اتجاه المخاطر:",
+        trend_report.get(area, {}).get(
+            "trend",
+‎            "غير متوفر"
+        )
+    )
+
+
+    print(
+‎        "تغير الدرجة:",
+        trend_report.get(area, {}).get(
+            "difference",
+            0
+        )
+    )
+
+
+    print(
+‎        "مستوى المخاطر:",
         data.get(
             "risk_level"
         )
@@ -185,7 +210,7 @@ for area,data in risk_report.items():
 
 
     print(
-        "الجاهزية:",
+‎        "الجاهزية:",
         data.get(
             "readiness"
         )
@@ -193,14 +218,11 @@ for area,data in risk_report.items():
 
 
     print(
-        "التوصية:",
+‎        "التوصية:",
         data.get(
             "recommendation"
         )
     )
-
-
-
 
 # =========================
 # THREAT ANALYSIS
@@ -208,63 +230,82 @@ for area,data in risk_report.items():
 
 
 header(
-    "تقرير التهديدات البحرية"
+‎    "تقرير التهديدات البحرية"
 )
 
 
 for area,data in risk_report.items():
 
-    threats=[]
+    threats = []
 
 
-    if data.get("strategic",0)>0:
+    if data.get(
+        "strategic",
+        0
+    ) > 0:
 
         threats.append(
-            "سفن استراتيجية"
+‎            "سفن استراتيجية"
         )
 
 
-    if data.get("stopped",0)>=10:
+    if data.get(
+        "stopped",
+        0
+    ) >= 10:
 
         threats.append(
-            "ازدحام أو توقف ملاحي"
+‎            "ازدحام أو توقف ملاحي"
         )
 
 
-    if data.get("tankers",0)>0:
+    if data.get(
+        "tankers",
+        0
+    ) > 0:
 
         threats.append(
-            "وجود ناقلات نفط"
+‎            "وجود ناقلات نفط"
         )
 
 
 
     print()
 
-    print("📍",area)
+    print(
+        "📍",
+        area
+    )
 
 
     if threats:
 
         print(
-            "مستوى التأثير: HIGH"
+‎            "مستوى التأثير: HIGH"
         )
 
-        for t in threats:
+
+        for threat in threats:
 
             print(
                 "-",
-                t
+                threat
             )
+
+
+        print(
+‎            "التوصية: رفع مستوى الجاهزية وتكثيف المتابعة"
+        )
+
 
     else:
 
         print(
-            "مستوى التأثير: LOW"
+‎            "مستوى التأثير: LOW"
         )
 
         print(
-            "- لا توجد تهديدات مكتشفة"
+‎            "- لا توجد تهديدات مكتشفة"
         )
 
 
@@ -275,55 +316,60 @@ for area,data in risk_report.items():
 
 
 header(
-    "الملخص التنفيذي"
+‎    "الملخص التنفيذي"
 )
 
 
+
 print(
-    "إجمالي السفن داخل المضائق:",
+‎    "إجمالي السفن داخل المضائق:",
     total_ships
 )
 
 
 print(
-    "أعلى منطقة خطورة:",
+‎    "أعلى منطقة خطورة:",
     highest_area
 )
 
 
 print(
-    "درجة الخطورة:",
+‎    "درجة الخطورة:",
     highest_score
 )
 
 
 
-if highest_score >=70:
+if highest_score >= 75:
 
-    status="🔴 حرج"
+    status = "🔴 حرج"
 
-elif highest_score >=50:
 
-    status="🟠 يحتاج متابعة مكثفة"
+elif highest_score >= 50:
 
-elif highest_score >=25:
+    status = "🟠 يحتاج متابعة مكثفة"
 
-    status="🟡 متوسط"
+
+elif highest_score >= 25:
+
+    status = "🟡 متوسط"
+
 
 else:
 
-    status="🟢 منخفض"
+    status = "🟢 منخفض"
 
 
 
 print(
-    "الحالة العامة:",
+‎    "الحالة العامة:",
     status
 )
 
 
 print("=" * 60)
 
+
 print(
-    "اكتمل تشغيل محرك الذكاء البحري"
+‎    "اكتمل تشغيل محرك الذكاء البحري"
 )
