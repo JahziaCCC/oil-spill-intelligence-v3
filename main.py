@@ -2,26 +2,36 @@ import asyncio
 from datetime import datetime, timezone
 
 from ais.collector import collect_ais
+
 from intelligence.maritime_engine import analyze_maritime
+
 from intelligence.trend_engine import analyze_trend
+
+from intelligence.history_db import (
+    create_database,
+    save_report
+)
+
 
 
 def header(title):
 
     print()
+
     print("=" * 60)
+
     print(title)
+
     print("=" * 60)
 
 
 
-# =========================
-# SYSTEM HEADER
-# =========================
+
 
 header(
     "Oil Spill Intelligence V3\nStrategic Maritime Intelligence Engine"
 )
+
 
 
 time_now = datetime.now(
@@ -31,6 +41,7 @@ time_now = datetime.now(
 )
 
 
+
 print(
     "وقت التشغيل :",
     time_now
@@ -38,8 +49,9 @@ print(
 
 
 
+
 # =========================
-# AIS COLLECTION
+# AIS DATA
 # =========================
 
 
@@ -49,9 +61,11 @@ vessels = asyncio.run(
 
 
 
+
 header(
     "ملخص نظام AIS"
 )
+
 
 
 print(
@@ -60,10 +74,12 @@ print(
 )
 
 
+
 print(
     "حالة النظام:",
     "ONLINE"
 )
+
 
 
 print(
@@ -73,9 +89,17 @@ print(
 
 
 
+
 # =========================
-# MARITIME ANALYSIS
+# RISK ANALYSIS
 # =========================
+
+
+
+header(
+    "تشغيل محرك تحليل المخاطر البحرية"
+)
+
 
 
 risk_report = analyze_maritime(
@@ -84,9 +108,52 @@ risk_report = analyze_maritime(
 
 
 
+print(
+    "تم الانتهاء من تحليل المخاطر."
+)
+
+
+
+
+# =========================
+# HISTORICAL DATABASE
+# =========================
+
+
+
+create_database()
+
+
+
+save_report(
+    risk_report
+)
+
+
+
+print(
+    "✅ Historical Risk Database Updated"
+)
+
+
+
+
+# =========================
+# TREND ANALYSIS
+# =========================
+
+
+
 trend_report = analyze_trend(
     risk_report
 )
+
+
+
+
+# =========================
+# MARITIME REPORT
+# =========================
 
 
 
@@ -97,13 +164,15 @@ header(
 
 
 highest_area = None
+
 highest_score = -1
 
 total_ships = 0
 
 
 
-for area, data in risk_report.items():
+
+for area,data in risk_report.items():
 
 
     print()
@@ -112,6 +181,7 @@ for area, data in risk_report.items():
         "📍",
         area
     )
+
 
     print(
         "-" * 40
@@ -131,6 +201,7 @@ for area, data in risk_report.items():
     )
 
 
+
     total_ships += ships
 
 
@@ -138,7 +209,9 @@ for area, data in risk_report.items():
     if score > highest_score:
 
         highest_score = score
+
         highest_area = area
+
 
 
 
@@ -152,10 +225,12 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "عدد السفن:",
         ships
     )
+
 
 
     print(
@@ -167,6 +242,7 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "ناقلات النفط:",
         data.get(
@@ -174,6 +250,7 @@ for area, data in risk_report.items():
             0
         )
     )
+
 
 
     print(
@@ -185,6 +262,7 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "السفن المتحركة:",
         data.get(
@@ -192,6 +270,7 @@ for area, data in risk_report.items():
             0
         )
     )
+
 
 
     print(
@@ -203,6 +282,7 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "درجة المخاطر:",
         score
@@ -210,24 +290,25 @@ for area, data in risk_report.items():
 
 
 
-    trend = trend_report.get(
-        area,
-        {}
-    )
-
-
     print(
         "اتجاه المخاطر:",
-        trend.get(
+        trend_report.get(
+            area,
+            {}
+        ).get(
             "trend",
-            "⚪ مستقر"
+            "غير متوفر"
         )
     )
 
 
+
     print(
         "تغير الدرجة:",
-        trend.get(
+        trend_report.get(
+            area,
+            {}
+        ).get(
             "difference",
             0
         )
@@ -243,12 +324,14 @@ for area, data in risk_report.items():
     )
 
 
+
     print(
         "الجاهزية:",
         data.get(
             "readiness"
         )
     )
+
 
 
     print(
@@ -262,9 +345,11 @@ for area, data in risk_report.items():
 
 
 
+
 # =========================
 # EARLY WARNING SYSTEM
 # =========================
+
 
 
 header(
@@ -273,7 +358,8 @@ header(
 
 
 
-for area, data in risk_report.items():
+
+for area,data in risk_report.items():
 
 
     score = data.get(
@@ -291,7 +377,7 @@ for area, data in risk_report.items():
 
 
 
-    if score >= 80:
+    if score >= 70:
 
         alert = "🔴 RED ALERT"
 
@@ -300,16 +386,7 @@ for area, data in risk_report.items():
         )
 
 
-    elif score >= 50:
-
-        alert = "🟠 ORANGE ALERT"
-
-        action = (
-            "زيادة المتابعة والتحليل"
-        )
-
-
-    elif score >= 25:
+    elif score >= 30:
 
         alert = "🟡 YELLOW ALERT"
 
@@ -341,24 +418,43 @@ for area, data in risk_report.items():
 
 
 
-    reasons = data.get(
-        "alert_reasons",
-        []
-    )
+    if score >= 30:
 
-
-    if reasons:
 
         print(
             "الأسباب:"
         )
 
-        for reason in reasons:
+
+        if data.get(
+            "ships",
+            0
+        ) >= 20:
 
             print(
-                "-",
-                reason
+                "- كثافة سفن عالية"
             )
+
+
+        if data.get(
+            "tankers",
+            0
+        ) > 0:
+
+            print(
+                "- وجود ناقلات نفط"
+            )
+
+
+        if data.get(
+            "strategic",
+            0
+        ) > 0:
+
+            print(
+                "- وجود سفن استراتيجية"
+            )
+
 
 
     print(
@@ -370,96 +466,10 @@ for area, data in risk_report.items():
 
 
 
-
-# =========================
-# THREAT ANALYSIS
-# =========================
-
-
-header(
-    "تقرير التهديدات البحرية"
-)
-
-
-
-for area, data in risk_report.items():
-
-
-    score = data.get(
-        "risk_score",
-        0
-    )
-
-
-    print()
-
-    print(
-        "📍",
-        area
-    )
-
-
-
-    if score >= 80:
-
-        impact = "HIGH"
-
-
-    elif score >= 50:
-
-        impact = "MEDIUM"
-
-
-    else:
-
-        impact = "LOW"
-
-
-
-    print(
-        "مستوى التأثير:",
-        impact
-    )
-
-
-
-    reasons = data.get(
-        "alert_reasons",
-        []
-    )
-
-
-
-    if reasons:
-
-        for reason in reasons:
-
-            print(
-                "-",
-                reason
-            )
-
-    else:
-
-        print(
-            "- لا توجد تهديدات مكتشفة"
-        )
-
-
-
-    if score >= 50:
-
-        print(
-            "التوصية: رفع مستوى المتابعة"
-        )
-
-
-
-
-
 # =========================
 # EXECUTIVE SUMMARY
 # =========================
+
 
 
 header(
@@ -489,17 +499,12 @@ print(
 
 
 
-if highest_score >= 80:
+if highest_score >= 70:
 
     status = "🔴 RED ALERT"
 
 
-elif highest_score >= 50:
-
-    status = "🟠 ORANGE ALERT"
-
-
-elif highest_score >= 25:
+elif highest_score >= 30:
 
     status = "🟡 YELLOW ALERT"
 
@@ -507,6 +512,7 @@ elif highest_score >= 25:
 else:
 
     status = "🟢 NORMAL"
+
 
 
 
@@ -520,6 +526,7 @@ print(
 print(
     "=" * 60
 )
+
 
 
 print(
