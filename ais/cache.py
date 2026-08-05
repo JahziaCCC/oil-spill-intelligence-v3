@@ -9,17 +9,13 @@ CACHE_FILE = "data/ais_cache.json"
 
 def save_ais_cache(vessels):
 
-    """
-    حفظ آخر بيانات AIS ناجحة
-    """
-
     os.makedirs(
         "data",
         exist_ok=True
     )
 
 
-    cache_data = {
+    cache = {
 
         "updated":
 
@@ -47,33 +43,80 @@ def save_ais_cache(vessels):
         CACHE_FILE,
         "w",
         encoding="utf-8"
-    ) as f:
+    ) as file:
 
 
         json.dump(
-
-            cache_data,
-
-            f,
-
+            cache,
+            file,
             ensure_ascii=False,
-
             indent=2
-
         )
+
+
+    print(
+        "✅ AIS CACHE SAVED"
+    )
 
 
 
 
 def load_ais_cache():
 
-    """
-    استرجاع آخر بيانات AIS محفوظة
-    """
+
+    # إنشاء ملف فارغ أول مرة
 
     if not os.path.exists(
         CACHE_FILE
     ):
+
+
+        os.makedirs(
+            "data",
+            exist_ok=True
+        )
+
+
+        empty_cache = {
+
+            "updated":
+
+            datetime.now(
+                timezone.utc
+            ).strftime(
+                "%Y-%m-%d %H:%M:%S UTC"
+            ),
+
+
+            "count": 0,
+
+
+            "vessels": []
+
+        }
+
+
+
+        with open(
+            CACHE_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+
+            json.dump(
+                empty_cache,
+                file,
+                ensure_ascii=False,
+                indent=2
+            )
+
+
+
+        print(
+            "🆕 AIS CACHE CREATED"
+        )
+
 
         return []
 
@@ -86,10 +129,10 @@ def load_ais_cache():
             CACHE_FILE,
             "r",
             encoding="utf-8"
-        ) as f:
+        ) as file:
 
 
-            data = json.load(f)
+            data = json.load(file)
 
 
 
@@ -100,11 +143,22 @@ def load_ais_cache():
 
 
 
-        print(
-            "♻️ AIS CACHE LOADED:",
-            len(vessels),
-            "vessels"
-        )
+        if vessels:
+
+
+            print(
+                "♻️ AIS CACHE LOADED:",
+                len(vessels),
+                "vessels"
+            )
+
+
+        else:
+
+
+            print(
+                "⚠️ AIS CACHE EMPTY"
+            )
 
 
 
@@ -126,7 +180,7 @@ def load_ais_cache():
 
 
 
-def cache_status():
+def get_cache_info():
 
 
     if not os.path.exists(
@@ -137,7 +191,7 @@ def cache_status():
         return {
 
             "status":
-            "EMPTY",
+            "MISSING",
 
             "count":
             0
@@ -146,52 +200,35 @@ def cache_status():
 
 
 
-    try:
+    with open(
+        CACHE_FILE,
+        "r",
+        encoding="utf-8"
+    ) as file:
 
 
-        with open(
-            CACHE_FILE,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-
-            data = json.load(f)
+        data = json.load(file)
 
 
 
-        return {
+    return {
 
 
-            "status":
-            "AVAILABLE",
+        "status":
+        "AVAILABLE",
 
 
-            "count":
-            data.get(
-                "count",
-                0
-            ),
-
-
-            "updated":
-            data.get(
-                "updated",
-                ""
-            )
-
-        }
-
-
-    except:
-
-
-        return {
-
-            "status":
-            "ERROR",
-
-            "count":
+        "count":
+        data.get(
+            "count",
             0
+        ),
 
-        }
+
+        "updated":
+        data.get(
+            "updated",
+            ""
+        )
+
+    }
