@@ -340,7 +340,7 @@ async def collect_ais():
 
 
             print(
-                "❌ لا يوجد AIS Cache"
+
             )
 
 
