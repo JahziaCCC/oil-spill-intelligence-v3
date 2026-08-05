@@ -3,71 +3,38 @@ import json
 import asyncio
 import websockets
 
+from ais.cache import (
+    save_ais_cache,
+    load_ais_cache
+)
+
 
 AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
-AIS_CACHE_FILE = "data/ais_cache.json"
 
-
-# نطاق اختبار واسع
-# الخليج + البحر الأحمر + المتوسط + قناة السويس
 BBOXES = [
+
     [
-        [20.0, 20.0],
-        [40.0, 60.0]
+        [22.0, 50.0],
+        [30.0, 62.0]
+    ],
+
+    [
+        [8.0, 38.0],
+        [16.0, 47.0]
+    ],
+
+    [
+        [27.0, 29.0],
+        [33.0, 35.0]
     ]
+
 ]
 
 
 
-def save_cache(vessels):
-
-    os.makedirs(
-        "data",
-        exist_ok=True
-    )
-
-    with open(
-        AIS_CACHE_FILE,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            vessels,
-            f,
-            ensure_ascii=False,
-            indent=2
-        )
-
-
-
-def load_cache():
-
-    if not os.path.exists(
-        AIS_CACHE_FILE
-    ):
-        return []
-
-    try:
-
-        with open(
-            AIS_CACHE_FILE,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-            return json.load(f)
-
-    except:
-
-        return []
-
-
-
-
-
 async def collect_ais():
+
 
     print()
     print("=" * 60)
@@ -81,10 +48,11 @@ async def collect_ais():
     )
 
 
+
     if not api_key:
 
         print(
-            "❌ AISSTREAM_API_KEY غير موجود"
+            "❌ Missing AISSTREAM_API_KEY"
         )
 
         return []
@@ -121,16 +89,17 @@ async def collect_ais():
 
             subscription = {
 
-                "APIKey": api_key,
+                "APIKey":
+                api_key,
 
-                "BoundingBoxes": BBOXES,
 
-                "FilterMessageTypes": [
+                "BoundingBoxes":
+                BBOXES,
 
-                    "PositionReport",
 
-                    "ShipStaticData"
-
+                "FilterMessageTypes":
+                [
+                    "PositionReport"
                 ]
 
             }
@@ -148,16 +117,14 @@ async def collect_ais():
             )
 
 
+
             print(
                 "⏳ Collecting AIS data..."
             )
 
 
 
-            start_time = (
-                asyncio.get_event_loop()
-                .time()
-            )
+            start = asyncio.get_event_loop().time()
 
 
 
@@ -165,9 +132,10 @@ async def collect_ais():
 
                 asyncio.get_event_loop().time()
                 -
-                start_time
+                start
+
                 <
-                120
+                60
 
             ):
 
@@ -176,31 +144,16 @@ async def collect_ais():
 
 
                     message = await asyncio.wait_for(
-                        websocket.recv(),
-                        timeout=15
-                    )
 
+                        websocket.recv(),
+
+                        timeout=8
+
+                    )
 
 
                     data = json.loads(
                         message
-                    )
-
-
-
-                    print(
-                        "📡 AIS MESSAGE:",
-                        data.get(
-                            "MessageType",
-                            "UNKNOWN"
-                        )
-                    )
-
-
-
-                    metadata = data.get(
-                        "MetaData",
-                        {}
                     )
 
 
@@ -220,7 +173,15 @@ async def collect_ais():
 
 
 
+                    metadata = data.get(
+                        "MetaData",
+                        {}
+                    )
+
+
+
                     if position:
+
 
 
                         vessel = {
@@ -271,14 +232,6 @@ async def collect_ais():
 
                             position.get(
                                 "TrueHeading"
-                            ),
-
-
-
-                            "timestamp":
-
-                            metadata.get(
-                                "time_utc"
                             )
 
                         }
@@ -326,37 +279,61 @@ async def collect_ais():
 
 
 
+    # ==========================
+    # البيانات الجديدة
+    # ==========================
+
+
     if len(vessels) > 0:
 
 
-        save_cache(
+
+        save_ais_cache(
             vessels
         )
+
+
+
+        print(
+            "🟢 AIS DATA STATUS: ONLINE"
+        )
+
+
+
+        print(
+            "AIS QUALITY: HIGH"
+        )
+
 
 
     else:
 
 
-        print()
 
+        print()
         print(
             "⚠️ لم يتم استقبال سفن جديدة"
         )
 
 
-        cache = load_cache()
+
+        vessels = load_ais_cache()
 
 
 
-        if len(cache) > 0:
+        if len(vessels) > 0:
+
 
 
             print(
-                "♻️ استخدام AIS Cache"
+                "🟡 AIS DATA STATUS: CACHE"
             )
 
 
-            vessels = cache
+            print(
+                "AIS QUALITY: MEDIUM"
+            )
+
 
 
         else:
@@ -364,6 +341,16 @@ async def collect_ais():
 
             print(
                 "❌ لا يوجد AIS Cache"
+            )
+
+
+            print(
+                "🔴 AIS DATA STATUS: OFFLINE"
+            )
+
+
+            print(
+                "AIS QUALITY: LOW"
             )
 
 
@@ -377,40 +364,10 @@ async def collect_ais():
     print("=" * 50)
 
 
-
     print(
         "AIS Vessels Received:",
         len(vessels)
     )
-
-
-
-    if len(vessels) > 0:
-
-
-        print(
-            "AIS DATA STATUS: ONLINE"
-        )
-
-
-        print(
-            "AIS QUALITY: GOOD"
-        )
-
-
-    else:
-
-
-        print(
-            "AIS DATA STATUS: OFFLINE"
-        )
-
-
-        print(
-            "AIS QUALITY: LOW"
-        )
-
-
 
     print("=" * 50)
 
