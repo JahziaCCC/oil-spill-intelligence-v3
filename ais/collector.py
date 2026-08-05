@@ -9,11 +9,12 @@ AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 AIS_CACHE_FILE = "data/ais_cache.json"
 
 
-# اختبار استقبال AIS من قناة السويس ومحيطها
+# نطاق اختبار واسع
+# الخليج + البحر الأحمر + المتوسط + قناة السويس
 BBOXES = [
     [
-        [27.0, 29.0],
-        [33.0, 35.0]
+        [20.0, 20.0],
+        [40.0, 60.0]
     ]
 ]
 
@@ -69,11 +70,8 @@ def load_cache():
 async def collect_ais():
 
     print()
-
     print("=" * 60)
-
     print("تشغيل AIS Collector")
-
     print("=" * 60)
 
 
@@ -128,7 +126,11 @@ async def collect_ais():
                 "BoundingBoxes": BBOXES,
 
                 "FilterMessageTypes": [
-                    "PositionReport"
+
+                    "PositionReport",
+
+                    "ShipStaticData"
+
                 ]
 
             }
@@ -144,7 +146,6 @@ async def collect_ais():
             print(
                 "✅ Subscription sent"
             )
-
 
 
             print(
@@ -165,7 +166,6 @@ async def collect_ais():
                 asyncio.get_event_loop().time()
                 -
                 start_time
-
                 <
                 120
 
@@ -188,22 +188,20 @@ async def collect_ais():
 
 
 
-                    # معرفة نوع الرسالة للتشخيص
-
-                    message_type = (
-                        data
-                        .get(
-                            "MessageType"
+                    print(
+                        "📡 AIS MESSAGE:",
+                        data.get(
+                            "MessageType",
+                            "UNKNOWN"
                         )
                     )
 
 
-                    if message_type:
 
-                        print(
-                            "📡 AIS MESSAGE:",
-                            message_type
-                        )
+                    metadata = data.get(
+                        "MetaData",
+                        {}
+                    )
 
 
 
@@ -222,20 +220,7 @@ async def collect_ais():
 
 
 
-                    metadata = (
-
-                        data
-                        .get(
-                            "MetaData",
-                            {}
-                        )
-
-                    )
-
-
-
                     if position:
-
 
 
                         vessel = {
@@ -318,7 +303,13 @@ async def collect_ais():
 
                 except asyncio.TimeoutError:
 
+
+                    print(
+                        "⏳ Waiting AIS message..."
+                    )
+
                     continue
+
 
 
 
@@ -335,9 +326,15 @@ async def collect_ais():
 
 
 
-    # إذا لم تصل بيانات نستخدم آخر Cache
+    if len(vessels) > 0:
 
-    if len(vessels) == 0:
+
+        save_cache(
+            vessels
+        )
+
+
+    else:
 
 
         print()
@@ -355,12 +352,11 @@ async def collect_ais():
 
 
             print(
-                "♻️ استخدام آخر بيانات AIS محفوظة"
+                "♻️ استخدام AIS Cache"
             )
 
 
             vessels = cache
-
 
 
         else:
@@ -372,21 +368,12 @@ async def collect_ais():
 
 
 
-    else:
-
-
-        save_cache(
-            vessels
-        )
-
 
 
     print()
 
     print("=" * 50)
-
     print("AIS SUMMARY")
-
     print("=" * 50)
 
 
@@ -399,6 +386,7 @@ async def collect_ais():
 
 
     if len(vessels) > 0:
+
 
         print(
             "AIS DATA STATUS: ONLINE"
