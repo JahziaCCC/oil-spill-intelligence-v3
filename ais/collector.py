@@ -10,12 +10,15 @@ AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 AIS_CACHE_FILE = "data/ais_cache.json"
 
 
+# اختبار AIS - قناة السويس ومحيطها
 BBOXES = [
 
     [
-        [22.0, 50.0],
-        [30.0, 62.0]
-    ],
+        [27.0, 29.0],
+        [33.0, 35.0]
+    ]
+
+]
 
     [
         [8.0, 38.0],
