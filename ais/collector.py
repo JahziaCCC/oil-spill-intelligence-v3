@@ -6,20 +6,14 @@ import websockets
 
 AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
-
-BBOXES = [
-    [
-        [8.0, 38.0],
-        [33.0, 62.0]
-    ]
-]
+AIS_CACHE_FILE = "data/ais_cache.json"
 
 
 async def collect_ais():
 
     print()
     print("=" * 60)
-    print("تشغيل AIS Collector V8 TEST MODE")
+    print("تشغيل AIS Collector GLOBAL DIAGNOSTIC MODE")
     print("=" * 60)
 
 
@@ -30,9 +24,8 @@ async def collect_ais():
 
     if not api_key:
 
-        print("❌ AIS KEY MISSING")
+        print("❌ AIS KEY NOT FOUND")
         return []
-
 
 
     print(
@@ -62,7 +55,9 @@ async def collect_ais():
 
                 "APIKey": api_key,
 
-                "BoundingBoxes": BBOXES
+                "FilterMessageTypes": [
+                    "PositionReport"
+                ]
 
             }
 
@@ -73,20 +68,22 @@ async def collect_ais():
 
 
             print(
-                "✅ Subscription sent"
+                "✅ GLOBAL SUBSCRIPTION SENT"
             )
 
 
-            print(
-                "⏳ Waiting AIS messages..."
-            )
+            timeout = 60
+
+            start = asyncio.get_event_loop().time()
 
 
-
-            counter = 0
-
-
-            while counter < 30:
+            while (
+                asyncio.get_event_loop().time()
+                -
+                start
+                <
+                timeout
+            ):
 
 
                 try:
@@ -102,44 +99,51 @@ async def collect_ais():
                     )
 
 
-                    print(
-                        "📡 MESSAGE TYPE:",
-                        data.get("MessageType")
+                    metadata = data.get(
+                        "MetaData",
+                        {}
                     )
 
 
-                    print(
-                        "RAW KEYS:",
-                        data.keys()
+                    position = data.get(
+                        "Message",
+                        {}
+                    ).get(
+                        "PositionReport"
                     )
 
 
-
-                    if "MetaData" in data:
-
-
-                        meta = data["MetaData"]
+                    if position:
 
 
                         vessel = {
 
                             "mmsi":
-                            meta.get("MMSI"),
+                            metadata.get("MMSI"),
+
 
                             "name":
-                            meta.get(
+                            metadata.get(
                                 "ShipName",
                                 ""
                             ),
 
+
                             "lat":
-                            meta.get(
-                                "latitude"
+                            position.get(
+                                "Latitude"
                             ),
 
+
                             "lon":
-                            meta.get(
-                                "longitude"
+                            position.get(
+                                "Longitude"
+                            ),
+
+
+                            "speed":
+                            position.get(
+                                "Sog"
                             )
 
                         }
@@ -152,19 +156,17 @@ async def collect_ais():
 
                         print(
                             "🚢",
-                            vessel
+                            vessel["name"],
+                            vessel["lat"],
+                            vessel["lon"]
                         )
 
 
                 except asyncio.TimeoutError:
 
                     print(
-                        "⏳ Waiting..."
+                        "⏳ Waiting AIS message..."
                     )
-
-
-                counter += 1
-
 
 
     except Exception as e:
@@ -175,15 +177,33 @@ async def collect_ais():
         )
 
 
+    os.makedirs(
+        "data",
+        exist_ok=True
+    )
+
+
+    with open(
+        AIS_CACHE_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            vessels,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
 
     print()
-    print("="*50)
+    print("=" * 60)
     print(
         "AIS RECEIVED:",
         len(vessels)
     )
-    print("="*50)
-
+    print("=" * 60)
 
 
     return vessels
