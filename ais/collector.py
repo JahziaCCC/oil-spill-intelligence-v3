@@ -3,15 +3,15 @@ import json
 import asyncio
 import websockets
 
-from ais.cache import (
-    save_ais_cache,
-    load_ais_cache
-)
+from datetime import datetime, timezone
 
 
 AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
+AIS_CACHE_FILE = "data/ais_cache.json"
 
+
+# مناطق المراقبة
 BBOXES = [
 
     [
@@ -33,13 +33,100 @@ BBOXES = [
 
 
 
-async def collect_ais():
+def save_cache(vessels):
 
+    os.makedirs(
+        "data",
+        exist_ok=True
+    )
+
+
+    data = {
+
+        "updated":
+
+            datetime.now(
+                timezone.utc
+            ).strftime(
+                "%Y-%m-%d %H:%M UTC"
+            ),
+
+        "count":
+
+            len(vessels),
+
+        "vessels":
+
+            vessels
+
+    }
+
+
+    with open(
+        AIS_CACHE_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
+
+    print(
+        "✅ AIS CACHE SAVED"
+    )
+
+
+
+
+def load_cache():
+
+    if not os.path.exists(
+        AIS_CACHE_FILE
+    ):
+
+        return []
+
+
+    try:
+
+        with open(
+            AIS_CACHE_FILE,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            data = json.load(f)
+
+
+        return data.get(
+            "vessels",
+            []
+        )
+
+
+    except Exception:
+
+        return []
+
+
+
+
+
+async def collect_ais():
 
     print()
     print("=" * 60)
     print("تشغيل AIS Collector")
     print("=" * 60)
+
+    print(
+        "COLLECTOR VERSION: V4 ACTIVE"
+    )
 
 
 
@@ -48,11 +135,10 @@ async def collect_ais():
     )
 
 
-
     if not api_key:
 
         print(
-            "❌ Missing AISSTREAM_API_KEY"
+            "❌ AISSTREAM_API_KEY غير موجود"
         )
 
         return []
@@ -74,11 +160,14 @@ async def collect_ais():
 
 
         async with websockets.connect(
-            AISSTREAM_URL,
-            ping_interval=20,
-            ping_timeout=20
-        ) as websocket:
 
+            AISSTREAM_URL,
+
+            ping_interval=20,
+
+            ping_timeout=20
+
+        ) as websocket:
 
 
             print(
@@ -86,21 +175,28 @@ async def collect_ais():
             )
 
 
-
             subscription = {
 
+
                 "APIKey":
-                api_key,
+
+                    api_key,
 
 
                 "BoundingBoxes":
-                BBOXES,
+
+                    BBOXES,
 
 
                 "FilterMessageTypes":
-                [
-                    "PositionReport"
-                ]
+
+                    [
+
+                        "PositionReport",
+
+                        "ShipStaticData"
+
+                    ]
 
             }
 
@@ -115,7 +211,6 @@ async def collect_ais():
             print(
                 "✅ Subscription sent"
             )
-
 
 
             print(
@@ -135,9 +230,11 @@ async def collect_ais():
                 start
 
                 <
-                60
+
+                120
 
             ):
+
 
 
                 try:
@@ -147,28 +244,14 @@ async def collect_ais():
 
                         websocket.recv(),
 
-                        timeout=8
+                        timeout=15
 
                     )
+
 
 
                     data = json.loads(
                         message
-                    )
-
-
-
-                    position = (
-
-                        data
-                        .get(
-                            "Message",
-                            {}
-                        )
-                        .get(
-                            "PositionReport"
-                        )
-
                     )
 
 
@@ -179,9 +262,24 @@ async def collect_ais():
                     )
 
 
+                    position = data.get(
+                        "Message",
+                        {}
+                    ).get(
+                        "PositionReport"
+                    )
 
-                    if position:
 
+                    static = data.get(
+                        "Message",
+                        {}
+                    ).get(
+                        "ShipStaticData"
+                    )
+
+
+
+                    if position or static:
 
 
                         vessel = {
@@ -189,50 +287,60 @@ async def collect_ais():
 
                             "mmsi":
 
-                            metadata.get(
-                                "MMSI"
-                            ),
-
+                                metadata.get(
+                                    "MMSI"
+                                ),
 
 
                             "name":
 
-                            metadata.get(
-                                "ShipName",
-                                ""
-                            ).strip(),
-
+                                metadata.get(
+                                    "ShipName",
+                                    ""
+                                ).strip(),
 
 
                             "lat":
 
-                            position.get(
-                                "Latitude"
-                            ),
-
+                                position.get(
+                                    "Latitude"
+                                )
+                                if position
+                                else None,
 
 
                             "lon":
 
-                            position.get(
-                                "Longitude"
-                            ),
-
+                                position.get(
+                                    "Longitude"
+                                )
+                                if position
+                                else None,
 
 
                             "speed":
 
-                            position.get(
-                                "Sog"
-                            ),
-
+                                position.get(
+                                    "Sog"
+                                )
+                                if position
+                                else None,
 
 
                             "heading":
 
-                            position.get(
-                                "TrueHeading"
-                            )
+                                position.get(
+                                    "TrueHeading"
+                                )
+                                if position
+                                else None,
+
+
+                            "timestamp":
+
+                                metadata.get(
+                                    "time_utc"
+                                )
 
                         }
 
@@ -241,7 +349,6 @@ async def collect_ais():
                         vessels.append(
                             vessel
                         )
-
 
 
                         print(
@@ -279,79 +386,88 @@ async def collect_ais():
 
 
 
-    # ==========================
-    # البيانات الجديدة
-    # ==========================
+    # إزالة التكرار حسب MMSI
+
+    unique = {}
+
+    for vessel in vessels:
+
+        if vessel.get(
+            "mmsi"
+        ):
+
+            unique[
+                vessel["mmsi"]
+            ] = vessel
 
 
-    if len(vessels) > 0:
+
+    vessels = list(
+        unique.values()
+    )
 
 
 
-        save_ais_cache(
+
+    # =========================
+    # حالة البيانات
+    # =========================
+
+
+    if vessels:
+
+
+        save_cache(
             vessels
         )
 
 
+        status = "REALTIME"
 
-        print(
-            "🟢 AIS DATA STATUS: ONLINE"
-        )
-
-
-
-        print(
-            "AIS QUALITY: HIGH"
-        )
+        quality = "HIGH"
 
 
 
     else:
 
 
-
-        print()
-        print(
-            "⚠️ لم يتم استقبال سفن جديدة"
-        )
+        cached = load_cache()
 
 
 
-        vessels = load_ais_cache()
+        if cached:
 
 
-
-        if len(vessels) > 0:
-
+            vessels = cached
 
 
             print(
-                "🟡 AIS DATA STATUS: CACHE"
+                "♻️ Using AIS Cache"
             )
 
 
-            print(
-                "AIS QUALITY: MEDIUM"
-            )
+            status = "CACHE"
+
+            quality = "MEDIUM"
 
 
 
         else:
 
 
-            print(
-
+            save_cache(
+                []
             )
 
 
             print(
-                "🔴 AIS DATA STATUS: OFFLINE"
+                "⚠️ AIS Cache موجود ولكن بدون بيانات"
             )
 
 
-            print(
-                "AIS QUALITY: LOW"
-            )
+            status = "OFFLINE"
+
+            quality = "LOW"
 
 
 
@@ -368,6 +484,19 @@ async def collect_ais():
         "AIS Vessels Received:",
         len(vessels)
     )
+
+
+    print(
+        "AIS DATA STATUS:",
+        status
+    )
+
+
+    print(
+        "AIS QUALITY:",
+        quality
+    )
+
 
     print("=" * 50)
 
